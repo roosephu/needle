@@ -1,12 +1,13 @@
 * Introduction
 
-This is my personal implementation for several cutting-edge algorithms, including
-1. DQN[fn::https://arxiv.org/abs/1312.5602]
-2. DDPG[fn::https://arxiv.org/abs/1509.02971]
-3. A3C[fn:https://arxiv.org/abs/1602.01783]
+This is my personal implementation for several algorithms, some of which are cutting edge, including
+1. [[https://arxiv.org/abs/1312.5602][DQN]]
+2. [[https://arxiv.org/abs/1509.02971][DDPG]]
+3. [[https://arxiv.org/abs/1602.01783][A3C]]
+4. [[http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf][REINFORCE]]
 
-Some optimizations are used. Double DQN[fn::https://arxiv.org/abs/1509.06461] is implemented instead of traditional DQN.
-Furthermore, prioritized sampling[fn::https://arxiv.org/abs/1511.05952] is currently being developing.
+Some optimizations are used. [[https://arxiv.org/abs/1509.06461][Double DQN]] is implemented instead of traditional DQN.
+Furthermore, [[https://arxiv.org/abs/1511.05952][prioritized sampling]] is currently being developing.
 
 Lots of codes are ad-hoc and needs refactored. Issues and discussions are always appreciated.
 
@@ -14,5 +15,13 @@ Lots of codes are ad-hoc and needs refactored. Issues and discussions are always
 
 Few examples are available now, due to lots of bugs. However, DDPG may succeed now. All codes depend on OpenAI/gym and TensorFlow, so if you want to run any experiments, install them please.
 
+#+BEGIN_SRC bash
     mkdir -p models/MountainCarContinuous-v0
     python MountainCarContinuous.py --mode train --env MountainCarContinuous-v0
+#+END_SRC
+
+Implementation for REINFORCE:
+
+#+BEGIN_SRC bash
+    python mountaincar-bak.py --mode train --env CartPole-v0
+#+END_SRC

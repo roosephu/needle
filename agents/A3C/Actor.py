@@ -8,14 +8,20 @@ class Actor:
 
     def actions(self, states):
         with tf.variable_scope(self.scope, reuse=type(self.scope) != str) as tf.scope:
-            h = tf.contrib.layers.fully_connected(
+            h1 = tf.contrib.layers.fully_connected(
                 inputs=states,
                 num_outputs=self.num_units,
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=tf.nn.relu,
             )
+            h2 = tf.contrib.layers.fully_connected(
+                inputs=h1,
+                num_outputs=self.num_units,
+                biases_initializer=tf.constant_initializer(),
+                activation_fn=tf.nn.relu,
+            )
             actions = tf.nn.softmax(tf.contrib.layers.fully_connected(
-                inputs=h,
+                inputs=h2,
                 num_outputs=self.action_dim,
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=None,

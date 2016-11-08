@@ -4,7 +4,7 @@ parser = argparse.ArgumentParser(description="Experiments on Reinforcement Learn
 parser.add_argument("--env", help="environment name", required=True, type=str)
 parser.add_argument("--batch-size", help="configure batch size (default 10)", default=10, type=int)
 parser.add_argument("--mode", help="inference or training (default infer)", default="infer")
-parser.add_argument("--gamma", help="value discount per step (default 0.9)", default=0.9, type=float)
+parser.add_argument("--gamma", help="value discount per step (default 0.99)", default=0.99, type=float)
 parser.add_argument("--model-dir", help="directory to save models", default=None)
 parser.add_argument("--log-dir", help="directory to save logs", default=None)
 parser.add_argument("--no-init", dest="init", help="initialize all variables", action="store_false")

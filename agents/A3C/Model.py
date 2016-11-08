@@ -4,7 +4,7 @@ import logging
 from arguments import args
 from Actor import Actor
 from Critic import Critic
-from ..DDPG.ShadowNet import ShadowNet
+from agents.DDPG.ShadowNet import ShadowNet
 
 class Model:
     def __init__(self, state_dim, action_dim):
@@ -23,14 +23,23 @@ class Model:
         self.op_rewards = tf.placeholder(tf.float32, shape=[None, None])
         self.op_choices = tf.placeholder(tf.int32, shape=[None, None])
 
-        self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        # self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
+            inputs=tf.reshape(self.op_inputs, [-1, state_dim]),
+            num_outputs=args.num_units,
+            biases_initializer=tf.constant_initializer(),
+            activation_fn=None,
+        ), [batch_size, num_timesteps, args.num_units])
+        self.op_states = self.initial_state
+
         batched_outputs = tf.reshape(self.op_outputs, [-1, args.num_units])
 
         # batched_outputs = tf.Print(batched_outputs, [tf.shape(self.op_outputs), tf.shape(self.op_states)], message="op_inputs.shape op_states.shape")
+
         batched_values = self.critic.values(batched_outputs)
         self.op_values = tf.reshape(batched_values, [batch_size, num_timesteps])
         op_advantages = self.op_rewards - self.op_values
-        self.op_critic_loss = tf.reduce_mean(op_advantages ** 2)
+        self.op_critic_loss = tf.reduce_mean(op_advantages**2)
 
         batched_actions = self.actor.actions(batched_outputs)
         self.op_actions = tf.reshape(batched_actions, [batch_size, num_timesteps, action_dim])

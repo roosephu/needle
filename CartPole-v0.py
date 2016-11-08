@@ -2,22 +2,12 @@
 import tensorflow as tf
 import numpy as np
 import gym
-import argparse
+from arguments import args
 import logging
-from ReplayBuffer import ReplayBuffer
-from Actor import Actor
-from Critic import Critic
+# from ReplayBuffer import ReplayBuffer
+# from Actor import Actor
+# from Critic import Critic
 
-ENV_NAME = "CartPole-v0"
-
-parser = argparse.ArgumentParser(description="Experiments on Reinforcement Learning")
-parser.add_argument("--batch-size", help="configure batch size (default 10)", default=10, type=int)
-parser.add_argument("--method", help="inference or training (default infer)", default="infer")
-parser.add_argument("--gamma", help="value discount per step (default 0.9)", default=0.9, type=float)
-parser.add_argument("--model-dir", help="directory to save models", default=ENV_NAME + '/model')
-parser.add_argument("--no-init", dest="init", help="initialize all variables", action="store_false")
-parser.set_defaults(init=True)
-args = parser.parse_args()
 
 def resblock(x):
     n = int(x.get_shape()[-1])
@@ -58,7 +48,8 @@ class Model:
         op_inputs = tf.placeholder(tf.float32, [None, input_dim], name="inputs")
         op_labels = tf.placeholder(tf.int32, [None], name="labels")
         op_rewards = tf.placeholder(tf.float32, [None], name="rewards")
-        op_logits = tf.identity(resnet(op_inputs, 10, output_dim, 1), name="logits")
+        # op_logits = tf.identity(resnet(op_inputs, 10, output_dim, 1), name="logits")
+        op_logits = tf.identity(transform(op_inputs, output_dim), name="logits")
 
         # h = tf.contrib.layers.fully_connected(
         #     inputs=op_inputs,
@@ -70,27 +61,31 @@ class Model:
         #     num_outputs=1,
         #     activation_fn=None,
         # )
-        op_baseline = tf.reshape(resnet(op_inputs, 10, 1, 1), [-1], name="baseline")
+        # op_baseline = tf.reshape(resnet(op_inputs, 10, 1, 1), [-1], name="baseline")
+        op_baseline = tf.reshape(transform(op_inputs, 1), [-1], name="baseline")
         op_actions = tf.reshape(tf.multinomial(op_logits, 1), [-1], name="actions")
 
         n = tf.shape(op_labels)[0]
         action_log_prob = tf.gather(tf.reshape(tf.nn.log_softmax(op_logits), [-1]), op_labels + output_dim * tf.range(n))
 
-        reward_loss = tf.reduce_mean(-(op_rewards - op_baseline) * action_log_prob, name="reward_loss")
+        reward_loss = tf.reduce_mean(-tf.stop_gradient(op_rewards - op_baseline) * action_log_prob, name="reward_loss")
         baseline_loss = tf.reduce_mean((op_baseline - op_rewards)**2, name="baseline_loss")
         self.op_loss = tf.add(reward_loss, baseline_loss * 1, name="loss")
 
-        op_train = tf.train.AdamOptimizer().minimize(self.op_loss, global_step=op_global_step, name="train")
+        op_train = tf.train.AdamOptimizer(1e-1).minimize(self.op_loss, global_step=op_global_step, name="train")
 
         self.saver = tf.train.Saver()
         self.sess = tf.Session()
 
-        if args.method == "train" and args.init:
+        if args.mode == "train" and args.init:
             logging.warning("Initialize variables...")
             self.sess.run(tf.initialize_all_variables())
         else:
             logging.warning("Restore variables...")
             self.saver.restore(self.sess, args.model_dir)
+
+        self.inputs = []
+        self.labels = []
 
     def train(self, rewards):
         _, loss, reward_loss, baseline_loss = self.sess.run(
@@ -101,8 +96,10 @@ class Model:
                 "rewards:0": rewards,
             }
         )
+        self.inputs = []
+        self.labels = []
 
-        if args.method == "train":
+        if args.mode == "train":
             self.saver.save(self.sess, args.model_dir)
         return loss, reward_loss, baseline_loss
 
@@ -114,6 +111,9 @@ class Model:
             }
         )
 
+        self.inputs += [inputs]
+        self.labels += [actions]
+
         return actions, baseline
 
     def debug(self):
@@ -123,10 +123,10 @@ class Model:
 
 #%%
 def main():
-    env = gym.make(ENV_NAME)
+    env = gym.make(args.env)
     # print env.action_space
     model = Model(4, 2)
-    replay_buffer = ReplayBuffer(10000)
+    # replay_buffer = ReplayBuffer(10000)
     baseline = 0
 
     for iterations in range(1000):
@@ -146,14 +146,14 @@ def main():
 
                 last_state = observation
                 observation, reward, done, info = env.step(action)
-                experience = observation, action, reward, last_state
-                replay_buffer.add(experience)
+                # experience = observation, action, reward, last_state
+                # replay_buffer.add(experience)
 
                 episode_reward += [reward]
                 steps += 1
                 # if episode == 0 and iterations % 1 == 0 and steps % 1 == 0:
                 #     env.render()
-                #     logging.warning("step: #%d, baseline = %.3f" % (steps, baseline))
+                    # logging.warning("step: #%d, baseline = %.3f" % (steps, baseline))
                 # if episode == 0:
                 #     print observation, action, info
 
@@ -162,11 +162,11 @@ def main():
             for i in range(steps - 1):
                 episode_reward[steps - 2 - i] += args.gamma * episode_reward[steps - 1 - i]
             rewards.append(np.array(episode_reward))
-            episode_rewards.append(episode_reward[0])
+            episode_rewards.append(steps)
 
         rewards = np.hstack(rewards)
         loss, reward_loss, baseline_loss = 0, 0, 0
-        if args.method == "train":
+        if args.mode == "train":
             loss, reward_loss, baseline_loss = model.train(rewards)
 
         performance = sum(episode_rewards) / args.batch_size
