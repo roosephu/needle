@@ -31,8 +31,6 @@ def main():
             new_state, reward, done, info = env.step(action[0])
             if steps == env.spec.timestep_limit:
                 done = False
-            if done:
-                reward = -1000
             new_state = np.array([new_state])
             agent.feedback(state, action, reward, done, new_state)
             state = new_state

@@ -1,0 +1,18 @@
+* Introduction
+
+This is my personal implementation for several cutting-edge algorithms, including
+1. DQN[fn::https://arxiv.org/abs/1312.5602]
+2. DDPG[fn::https://arxiv.org/abs/1509.02971]
+3. A3C[fn:https://arxiv.org/abs/1602.01783]
+
+Some optimizations are used. Double DQN[fn::https://arxiv.org/abs/1509.06461] is implemented instead of traditional DQN.
+Furthermore, prioritized sampling[fn::https://arxiv.org/abs/1511.05952] is currently being developing.
+
+Lots of codes are ad-hoc and needs refactored. Issues and discussions are always appreciated.
+
+# Tests
+
+Few examples are available now, due to lots of bugs. However, DDPG may succeed now. All codes depend on OpenAI/gym and TensorFlow, so if you want to run any experiments, install them please.
+
+    mkdir -p models/MountainCarContinuous-v0
+    python MountainCarContinuous.py --mode train --env MountainCarContinuous-v0

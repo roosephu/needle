@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import logging
-from ReplayBuffer import ReplayBuffer
+from helper.ReplayBuffer import ReplayBuffer
 from ShadowNet import ShadowNet
 from Actor import Actor
 from Critic import Critic
@@ -31,7 +31,7 @@ class Agent:
     def reset(self):
         self.noise = OUProcess()
         self.noise_count += 1
-        if self.noise_count % 50 == 0:
+        if self.noise_count % 100 == 0:
             self.noise_decay *= 0.8
         self.saver.save(self.sess, args.model_dir)
 
@@ -42,7 +42,7 @@ class Agent:
         experience = state, action, reward, done, new_state
         self.replay_buffer.add(experience)
 
-        if len(self.replay_buffer.queue) >= 10000:
+        if len(self.replay_buffer) >= 10000:
             states, actions, rewards, dones, new_states = self.replay_buffer.sample(args.batch_size)
 
             q_rewards = rewards + args.gamma * (1 - dones) * self.critic.shadow.infer(new_states, self.actor.shadow.infer(new_states))
