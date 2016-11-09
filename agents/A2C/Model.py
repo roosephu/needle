@@ -20,6 +20,13 @@ class Model(Sunlit):
 
         # logging.info("shape of inputs: %s" % (self.op_inputs))
         self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        # self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
+        #     inputs=tf.reshape(self.op_inputs, [-1, state_dim]),
+        #     num_outputs=args.num_units,
+        #     # biases_initializer=tf.constant_initializer(),
+        #     activation_fn=None,
+        # ), [batch_size, num_timesteps, args.num_units])
+        # self.op_states = self.initial_state
 
         self.critic = Critic(args.num_units)
         self.op_values = self.critic.values(self.op_outputs)
@@ -38,14 +45,6 @@ class Model(Sunlit):
         advantages = self.op_advantages * \
             tf.to_float(tf.tile(tf.expand_dims(tf.range(self.num_timesteps), 0), (self.batch_size, 1)) < self.op_lengths)
         self.op_choices = tf.placeholder(tf.int32, shape=[None, None])
-
-        # self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
-        #     inputs=tf.reshape(self.op_inputs, [-1, state_dim]),
-        #     num_outputs=args.num_units,
-        #     # biases_initializer=tf.constant_initializer(),
-        #     activation_fn=None,
-        # ), [batch_size, num_timesteps, args.num_units])
-        # self.op_states = self.initial_state
 
         # self.op_advantages = (self.op_rewards - self.op_values) * (1 - self.op_dones)
         self.op_critic_loss = tf.reduce_mean(-advantages * self.op_values)

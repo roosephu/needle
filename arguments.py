@@ -16,6 +16,7 @@ parser.add_argument("--num-units", help="# hidden units for LSTM", default=100, 
 parser.add_argument("--GAE-decay", help="TD(lambda)", default=0.98, type=float)
 parser.add_argument("--replay-buffer-size", help="size of experience replay buffer", default=10000, type=int)
 parser.add_argument("--learning-rate", help="learning rate", default=1e-3, type=float)
+parser.add_argument("--agent", help="which agent to play", required=True, default="A2C", type=str)
 parser.set_defaults(init=True)
 args = parser.parse_args()
 

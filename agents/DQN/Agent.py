@@ -3,13 +3,14 @@ import logging
 import numpy as np
 from helper.ShadowNet import ShadowNet
 from helper.ReplayBuffer import ReplayBuffer
-from agents.DDPG.OUProcess import OUProcess
+from agents.Agent import BasicAgent
 from Value import Value
 from arguments import args
 
-class Agent:
-    def __init__(self, env):
-        self.value = ShadowNet(lambda: Value(4, 2, 1e-2), args.tau, "value")
+class Agent(BasicAgent):
+    def __init__(self, input_dim, output_dim):
+        self.output_dim = output_dim
+        self.value = ShadowNet(lambda: Value(input_dim, output_dim, 1e-2), args.tau, "value")
         self.value.origin._finish_origin()
         self.saver = tf.train.Saver()
 
@@ -21,23 +22,22 @@ class Agent:
             logging.info("Restore variables...")
             self.saver.restore(tf.get_default_session(), args.model_dir)
 
-        self.replay_buffer = ReplayBuffer(1000000)
+        self.replay_buffer = ReplayBuffer(args.replay_buffer_size)
         self.epsilon = args.epsilon
-        self.env = env
         logging.info("epsilon = %s" % (self.epsilon))
 
-    def reset(self):
-        self.saver.save(tf.get_default_session(), args.model_dir)
-        self.noise = OUProcess()
+    def reset(self, save=False):
+        if save:
+            self.saver.save(tf.get_default_session(), args.model_dir)
 
     def action(self, state, show=False):
         if np.random.rand() < self.epsilon:
-            return [self.env.action_space.sample()]
+            return np.array([np.random.randint(self.output_dim)])
         values = self.value.origin.infer(state)
         # if show:
         action = np.argmax(values)
         # logging.info("values = %s, action = %s" % (values, action))
-        return [action]
+        return np.array([action])
 
     def feedback(self, state, action, reward, done, new_state):
         reward = np.array([reward])

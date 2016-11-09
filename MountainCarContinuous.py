@@ -1,4 +1,3 @@
-#%%
 import gym
 import logging
 from arguments import args

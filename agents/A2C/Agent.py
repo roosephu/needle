@@ -3,24 +3,13 @@ import logging
 import numpy as np
 from arguments import args
 from Model import Model
+from agents.Agent import BasicAgent
 from helper.ReplayBuffer import ReplayBuffer
 from helper.ShadowNet2 import ShadowNet
 
-def decode(action_space, index):
-    if len(action_space) == 1:
-        return [index]
-    return [index % action_space[0]] + decode(action_space[1:], index / action_space[0])
-
-def encode(action_space, index):
-    # if len(action_space) == 1:
-    #     return index[0]
-    # return index[0] + encode(action_space[1:], index[1:]) * action_space[0]
-    # return index[0] + index[1] * 2 + index[2] * 4
-    return index
-
-class Agent:
-    def __init__(self, env):
-        self.model = ShadowNet(lambda: Model(4, 2), args.tau, "A2C")
+class Agent(BasicAgent):
+    def __init__(self, input_dim, output_dim):
+        self.model = ShadowNet(lambda: Model(input_dim, output_dim), args.tau, "A2C")
         self.saver = tf.train.Saver()
 
         if args.mode == "train" and args.init:
@@ -31,8 +20,6 @@ class Agent:
             logging.info("Restore variables...")
             self.saver.restore(tf.get_default_session(), args.model_dir)
 
-        self.env = env
-        self.action_space = (2, 2, 5)
         self.buffer = []
         # self.values = []
 
@@ -45,18 +32,29 @@ class Agent:
         self.buffer = []
         if save:
             self.saver.save(tf.get_default_session(), args.model_dir)
-        # self.values = []
 
     def action(self, state, show=False):
+        '''
+            Input:
+                @state: of shape (1, input_dim)
+            Output:
+                @action: of shape (1, )
+        '''
         action = self.model.origin.infer(np.array([state]))
         # self.values.append(value[0])
         # print np.max(action[0][0])
-        return decode(self.action_space, np.random.choice(len(action[0][0]), p=action[0][0]))
+        return np.array([np.random.choice(len(action[0][0]), p=action[0][0])])
 
     def feedback(self, state, action, reward, done, new_state):
+        '''
+            Input:
+                @state: of shape (1, input_dim)
+                @action: of shape (1, )
+                @reward: integer
+                @done: boolean
+                @new_state: of shape (1, input_dim)
+        '''
         reward = np.array([reward])
-        # print encode(action[0]), action[0], decode(self.action_space, encode(action[0]))
-        action = np.array([encode(self.action_space, action[0])]) # ad-hoc
 
         experience = state, action, reward, new_state
         self.buffer.append(experience)
@@ -72,13 +70,13 @@ class Agent:
         episode = tuple(map(lambda x: np.array([x]), (states, actions, rewards, np.array([num_timesteps]))))
         self.replay_buffer.add(episode)
 
-    def train(self):
+    def train_episode(self):
         # self.add_to_replay_buffer()
         # states, actions, rewards, dones = self.replay_buffer.sample(args.batch_size)
 
         if len(self.replay_buffer) >= args.batch_size:
             states, actions, rewards, lengths = self.replay_buffer.sample(args.batch_size)
-            # print values.shape, dones.shape, actions.shape, states.shape
+            # logging.info("%s %s %s %s" % (states.shape, lengths.shape, actions.shape, rewards.shape))
             # print states.shape, actions.shape, rewards.shape, dones.shape
 
             # advantages = rewards + args.gamma * values[1:] - values[:1]
