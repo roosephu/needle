@@ -4,7 +4,7 @@ import numpy as np
 from arguments import args
 from Model import Model
 from helper.ReplayBuffer import ReplayBuffer
-from helper.ShadowNet import ShadowNet
+from helper.ShadowNet2 import ShadowNet
 
 def decode(action_space, index):
     if len(action_space) == 1:
@@ -21,13 +21,12 @@ def encode(action_space, index):
 class Agent:
     def __init__(self, env):
         self.model = ShadowNet(lambda: Model(4, 2), args.tau, "A2C")
-        self.model.origin._finish_origin()
         self.saver = tf.train.Saver()
 
         if args.mode == "train" and args.init:
             logging.info("Initializing variables...")
             tf.get_default_session().run(tf.initialize_all_variables())
-            tf.get_default_session().run(self.model.op_init)
+            tf.get_default_session().run(self.model.op_shadow_init)
         else:
             logging.info("Restore variables...")
             self.saver.restore(tf.get_default_session(), args.model_dir)
@@ -97,4 +96,4 @@ class Agent:
             # logging.info("total advantages = %s", advantages[0])
             # print states.shape, advantages.shape, actions.shape, dones.shape
             self.model.origin.train(states, advantages, actions, lengths)
-            tf.get_default_session().run(self.model.op_train)
+            tf.get_default_session().run(self.model.op_shadow_train)
