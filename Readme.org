@@ -11,7 +11,7 @@ Furthermore, [[https://arxiv.org/abs/1511.05952][prioritized sampling]] is curre
 
 Lots of codes are ad-hoc and needs refactored. Issues and discussions are always appreciated.
 
-# Tests
+* Tests
 
 Few examples are available now, due to lots of bugs. However, DDPG may succeed now. All codes depend on OpenAI/gym and TensorFlow, so if you want to run any experiments, install them please.
 
@@ -24,4 +24,10 @@ Implementation for REINFORCE:
 
 #+BEGIN_SRC bash
     python mountaincar-bak.py --mode train --env CartPole-v0
+#+END_SRC
+
+Experimental A2C (*synchronous* advantage actor-critic) running on CartPole-v0. Note that A2C uses LSTM by default.
+
+#+BEGIN_SRC bash
+    python Copy-v0.py --env CartPole-v0 --mode train --iterations 100000 --GAE-decay 1 --gamma 0.99 --tau 0.1 --batch-size 10
 #+END_SRC

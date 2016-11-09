@@ -21,6 +21,13 @@ class ReplayBuffer:
     def __len__(self):
         return min(self.length, self.size)
 
+    @staticmethod
+    def reshape(values):
+        shape = np.max([v.shape for v in values], axis=0)
+        zeros = shape * 0
+        values = [[np.pad(v, zip(zeros, shape - v.shape), 'constant')] for v in values]
+        return np.concatenate(values)
+
     def sample(self, batch_size):
         samplings = []
         for i in range(batch_size):
@@ -28,5 +35,11 @@ class ReplayBuffer:
 
         ret = []
         for i in range(len(samplings[0])):
-            ret.append(np.concatenate([s[i] for s in samplings]))
+            ret.append(ReplayBuffer.reshape([s[i] for s in samplings]))
         return ret
+
+def main():
+    print ReplayBuffer.reshape([np.array([[1], [2]]), np.array([[2, 2], [3, 3], [4, 5]])])
+
+if __name__ == "__main__":
+    main()

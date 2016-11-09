@@ -11,8 +11,8 @@ from arguments import args
 class Agent:
     def __init__(self):
         self.sess = tf.Session()
-        self.actor = ShadowNet(self.sess, lambda: Actor(self.sess, 2, 1, 1e-4), args.tau, "actor")
-        self.critic = ShadowNet(self.sess, lambda: Critic(self.sess, 2, 1, 1e-3), args.tau, "critic")
+        self.actor = ShadowNet(lambda: Actor(self.sess, 2, 1, 1e-4), args.tau, "actor")
+        self.critic = ShadowNet(lambda: Critic(self.sess, 2, 1, 1e-3), args.tau, "critic")
         self.summary_writer = tf.train.SummaryWriter(args.log_dir)
 
         self.saver = tf.train.Saver()

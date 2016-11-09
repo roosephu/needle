@@ -22,7 +22,7 @@ class Sunlit:
             self.op_init = tf.initialize_variables(variables, name="init")
 
 class ShadowNet:
-    def __init__(self, sess, create_model, tau, name):
+    def __init__(self, create_model, tau, name):
         scope_name = "shadow_net_" + name
         with tf.variable_scope(scope_name):
             with tf.variable_scope("origin") as origin_scope:
@@ -51,4 +51,3 @@ class ShadowNet:
 
         self.origin = origin_model
         self.shadow = shadow_model
-        self.sess = sess

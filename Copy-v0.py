@@ -3,9 +3,11 @@ import gym
 import logging
 import numpy as np
 from arguments import args
-from agents.A3C.Agent import Agent
+from helper.ReplayBuffer import ReplayBuffer
+from agents.A2C.Agent import Agent
 
 def main():
+
     env = gym.make(args.env)
     if args.monitor != "":
         env.monitor.start(args.monitor)
@@ -44,8 +46,7 @@ def main():
             #     print observation, action, info
 
         agent.train()
-        if iterations % 10 == 0:
-            logging.warning("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
+        logging.warning("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
 
     if args.monitor != "":
         env.monitor.close()
