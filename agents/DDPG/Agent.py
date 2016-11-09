@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import logging
 from helper.ReplayBuffer import ReplayBuffer
-from ShadowNet import ShadowNet
+from helper.ShadowNet import ShadowNet
 from Actor import Actor
 from Critic import Critic
 from OUProcess import OUProcess
@@ -12,16 +12,18 @@ class Agent:
     def __init__(self):
         self.sess = tf.Session()
         self.actor = ShadowNet(lambda: Actor(self.sess, 2, 1, 1e-4), args.tau, "actor")
+        self.actor.origin._finish_origin()
         self.critic = ShadowNet(lambda: Critic(self.sess, 2, 1, 1e-3), args.tau, "critic")
+        self.critic.origin._finish_origin()
         self.summary_writer = tf.train.SummaryWriter(args.log_dir)
 
         self.saver = tf.train.Saver()
         if args.mode == "train" and args.init:
-            logging.warning("Initialize variables...")
+            logging.info("Initialize variables...")
             self.sess.run(tf.initialize_all_variables())
-            self.sess.run([self.actor.shadow.op_init, self.critic.shadow.op_init])
+            self.sess.run([self.critic.op_shadow_init])
         else:
-            logging.warning("Restore variables...")
+            logging.info("Restore variables...")
             self.saver.restore(self.sess, args.model_dir)
 
         self.replay_buffer = ReplayBuffer(1000000)
@@ -70,7 +72,7 @@ class Agent:
             #     print grads[i] - grads[i + l // 2]
             # exit()
 
-            self.sess.run([self.actor.shadow.op_train, self.critic.shadow.op_train])
+            self.sess.run([self.actor.op_shadow_train, self.critic.op_shadow_train])
 
     def action(self, state, show=False):
         # if len(self.replay_buffer.queue) >= 10:
@@ -78,5 +80,5 @@ class Agent:
         #     state = np.vstack([state, states])
         action = self.actor.origin.infer(state)
         if show:
-            logging.warning("action = %s, state = %s" % (action, state))
+            logging.info("action = %s, state = %s" % (action, state))
         return action + self.noise.next() * self.noise_decay

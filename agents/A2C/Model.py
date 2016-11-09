@@ -4,15 +4,16 @@ import logging
 from arguments import args
 from Actor import Actor
 from Critic import Critic
-from agents.DDPG.ShadowNet import ShadowNet
+from helper.ShadowNet import Sunlit
 
-class Model:
+class Model(Sunlit):
     def __init__(self, state_dim, action_dim):
         self.lstm = tf.nn.rnn_cell.LSTMCell(args.num_units)
+        self.learning_rate = args.learning_rate
         self.state_dim = state_dim
 
         self.op_inputs = tf.placeholder(tf.float32, [None, None, state_dim])
-        # logging.warning("shape of inputs: %s" % (self.op_inputs))
+        # logging.info("shape of inputs: %s" % (self.op_inputs))
         batch_size = tf.shape(self.op_inputs)[0]
         num_timesteps = tf.shape(self.op_inputs)[1]
         self.initial_state = self.lstm.zero_state(batch_size, tf.float32)
@@ -25,7 +26,7 @@ class Model:
 
         self.actor = Actor(action_dim)
         # self.critic = ShadowNet(tf.get_default_session(), lambda: Critic(), args.tau, "critic")
-        self.critic = ShadowNet(lambda: Critic(args.num_units, self.op_advantages), args.tau, "critic")
+        self.critic = Critic(args.num_units, self.op_advantages)
 
         self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
         # self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
@@ -36,8 +37,7 @@ class Model:
         # ), [batch_size, num_timesteps, args.num_units])
         # self.op_states = self.initial_state
 
-        self.op_values = self.critic.origin.values(self.op_outputs)
-        self.op_shadow_values = self.critic.shadow.values(self.op_outputs)
+        self.op_values = self.critic.values(self.op_outputs)
         # self.op_advantages = (self.op_rewards - self.op_values) * (1 - self.op_dones)
         self.op_critic_loss = tf.reduce_mean(-advantages * self.op_values)
 
@@ -72,27 +72,7 @@ class Model:
             tf.all_variables(), # TODO all trainable variables?
         )
 
-        # don't need op_critic_loss any more due to self.critic
         self.op_loss = self.op_actor_loss + self.op_critic_loss #  + regularization
-        self.op_train = tf.train.AdamOptimizer(1e-3).minimize(self.op_loss)
-
-        # loss = []
-        # for i in range(max_depth):
-        #     op_input = tf.placeholder([batch_size, input_dim])
-        #     op_reward = tf.placeholder([batch_size])
-        #     op_done = tf.placeholder([batch_size])
-        #     op_choices = tf.placeholder([batch_size])
-
-        #     state = self.lstm(op_input, state)
-        #     op_action = self.actor.infer(state)
-        #     op_value = self.critic.infer(state)
-        #     op_advantage = op_reward - op_value
-
-        #     op_action_prob = tf.gather(tf.reshape(op_action, [-1]), tf.range(batch_size) * action_dim + op_action)
-        #     loss.append(tf.done * (op_advantage**2 + tf.log(op_action_prob) * tf.stop_gradient(op_advantage)))
-        #     self.recurrent.append((state, op_input, op_done, op_action, op_value))
-        # self.op_loss = tf.add_n(*loss)
-        # self.op_train = tf.train.AdamOptimizer().minimize(self.op_loss)
 
     def reset(self):
         self.current_state = tf.get_default_session().run(
@@ -123,14 +103,11 @@ class Model:
         return values
 
     def train(self, inputs, advantages, choices, lengths):
-        # print rewards
         tf.get_default_session().run(
-            [self.op_train, self.critic.shadow.op_train],
+            self.op_train,
             feed_dict={
                 self.op_choices: choices,
                 self.op_inputs: inputs,
-                # self.critic.origin.op_states: inputs,
-                # self.op_rewards: rewards,
                 self.op_advantages: advantages,
                 self.op_lengths: lengths,
             }

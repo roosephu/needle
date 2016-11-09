@@ -21,7 +21,7 @@ class Actor:
                 activation_fn=tf.nn.relu,
             )
             logits = tf.contrib.layers.fully_connected(
-                inputs=states, # TODO
+                inputs=states,
                 num_outputs=self.action_dim,
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=None,

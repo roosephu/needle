@@ -7,6 +7,7 @@ from helper.ReplayBuffer import ReplayBuffer
 from agents.A2C.Agent import Agent
 
 def main():
+    logging.root.setLevel(logging.INFO)
 
     env = gym.make(args.env)
     if args.monitor != "":
@@ -16,7 +17,9 @@ def main():
     agent = Agent(env)
 
     for iterations in range(args.iterations):
-        agent.reset()
+        if iterations % 10 == 0:
+            logging.root.setLevel(logging.DEBUG)
+        agent.reset(save=iterations % 50 == 0)
         state = env.reset()
         state = np.array([state])
 
@@ -39,14 +42,18 @@ def main():
             state = new_state
 
             total_rewards += reward
-            if iterations % 10 == 0 and steps % 1 == 0 and args.mode == "infer":
-                env.render()
-                logging.warning("step: #%d, action = %.3f, reward = %.3f, iteration = %d" % (steps, action[0], reward, iterations))
+            # if iterations % 10 == 0 and steps % 1 == 0 and args.mode == "infer":
+            #     env.render()
+            #     logging.warning("step: #%d, action = %.3f, reward = %.3f, iteration = %d" % (steps, action[0], reward, iterations))
             # if episode == 0:
             #     print observation, action, info
 
-        agent.train()
-        logging.warning("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
+        # if iterations % args.batch_size == 0:
+        if args.mode == "train":
+            agent.train()
+        logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
+        if iterations % 10 == 0:
+            logging.root.setLevel(logging.INFO)
 
     if args.monitor != "":
         env.monitor.close()

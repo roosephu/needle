@@ -1,7 +1,6 @@
 import tensorflow as tf
-from agents.DDPG.ShadowNet import Sunlit
 
-class Critic(Sunlit):
+class Critic:
     def __init__(self, state_dim, advantages, num_units=100):
         self.scope = "critic"
         self.num_units = num_units
@@ -36,7 +35,7 @@ class Critic(Sunlit):
         return self.op_values
 
     def infer(self, states):
-        with tf.variable_scope(self.scope, reuse=type(self.scope) != str) as tf.scope:
+        with tf.variable_scope(self.scope, reuse=type(self.scope) != str) as self.scope:
             return tf.get_default_session().run(
                 self.op_values,
                 feed_dict={

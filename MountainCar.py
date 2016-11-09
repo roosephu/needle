@@ -2,10 +2,12 @@
 import gym
 import logging
 import numpy as np
+import tensorflow as tf
 from arguments import args
 from agents.DQN.Agent import Agent
 
 def main():
+    logging.root.setLevel(logging.INFO)
     env = gym.make(args.env)
     if args.monitor != "":
         env.monitor.start(args.monitor)
@@ -48,4 +50,5 @@ def main():
         env.monitor.close()
 
 if __name__ == "__main__":
-    main()
+    with tf.Session().as_default():
+        main()

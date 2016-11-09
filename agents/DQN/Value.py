@@ -1,10 +1,9 @@
 import tensorflow as tf
-from ..DDPG.ShadowNet import Sunlit
+from helper.ShadowNet import Sunlit
 
 class Value(Sunlit):
-    def __init__(self, sess, state_dim, action_dim, learning_rate):
+    def __init__(self, state_dim, action_dim, learning_rate):
         self.learning_rate = learning_rate
-        self.sess = sess
 
         self.op_states = tf.placeholder(tf.float32, [None, state_dim])
         h1 = tf.contrib.layers.fully_connected(
@@ -42,7 +41,7 @@ class Value(Sunlit):
         self.op_loss = tf.reduce_sum((self.op_rewards - self.op_computed_values)**2)
 
     def train(self, states, actions, values):
-        self.sess.run(
+        tf.get_default_session().run(
             self.op_train,
             feed_dict={
                 self.op_states: states,
@@ -52,7 +51,7 @@ class Value(Sunlit):
         )
 
     def infer(self, states):
-        values = self.sess.run(
+        values = tf.get_default_session().run(
             self.op_values,
             feed_dict={
                 self.op_states: states,
