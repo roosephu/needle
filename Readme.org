@@ -17,7 +17,7 @@ Few examples are available now, due to lots of bugs. However, DDPG may succeed n
 
 #+BEGIN_SRC bash
     mkdir -p models/MountainCarContinuous-v0
-    python MountainCarContinuous.py --mode train --env MountainCarContinuous-v0
+    python main.py --mode train --env MountainCarContinuous-v0 --agent DDPG
 #+END_SRC
 
 Implementation for REINFORCE:
