@@ -3,9 +3,8 @@ import tensorflow as tf
 import numpy as np
 
 class Critic(Sunlit):
-    def __init__(self, sess, state_dim, action_dim, learning_rate):
+    def __init__(self, state_dim, action_dim, learning_rate):
         self.learning_rate = learning_rate
-        self.sess = sess
         self.op_states = tf.placeholder(tf.float32, [None, state_dim])
         self.op_actions = tf.placeholder(tf.float32, [None, action_dim])
         self.op_rewards = tf.placeholder(tf.float32, [None])
@@ -47,7 +46,7 @@ class Critic(Sunlit):
 
 
     def train(self, states, actions, rewards):
-        _ = self.sess.run(
+        _ = tf.get_default_session().run(
             self.op_train,
             feed_dict={
                 self.op_states: states,
@@ -57,7 +56,7 @@ class Critic(Sunlit):
         )
 
     def infer(self, states, actions):
-        critic = self.sess.run(
+        critic = tf.get_default_session().run(
             self.op_critic,
             feed_dict={
                 self.op_states: states,
@@ -67,7 +66,7 @@ class Critic(Sunlit):
         return critic
 
     def grad(self, states, actions):
-        grad = self.sess.run(
+        grad = tf.get_default_session().run(
             self.op_grad_actions,
             feed_dict={
                 self.op_states: states,

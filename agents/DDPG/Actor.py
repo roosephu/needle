@@ -4,9 +4,8 @@ import numpy as np
 
 
 class Actor(Sunlit):
-    def __init__(self, sess, state_dim, action_dim, learning_rate):
+    def __init__(self, state_dim, action_dim, learning_rate):
         self.learning_rate = learning_rate
-        self.sess = sess
         # build critic network
         self.op_states = tf.placeholder(tf.float32, [None, state_dim])
 
@@ -51,7 +50,7 @@ class Actor(Sunlit):
     #     return tf.train.AdamOptimizer(1e-4).apply_gradients(zip(self.op_grads2, self.variables))
 
     def train(self, states, grad_actions):
-        _, summary = self.sess.run(
+        _, summary = tf.get_default_session().run(
             [self.op_train, self.op_summary],
             feed_dict={
                 self.op_states: states,
@@ -61,7 +60,7 @@ class Actor(Sunlit):
         return summary
 
     def infer(self, states):
-        actions = self.sess.run(
+        actions = tf.get_default_session().run(
             self.op_actions,
             feed_dict={
                 self.op_states: states,

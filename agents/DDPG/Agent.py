@@ -3,39 +3,40 @@ import numpy as np
 import logging
 from helper.ReplayBuffer import ReplayBuffer
 from helper.ShadowNet import ShadowNet
+from agents.Agent import BasicAgent
 from Actor import Actor
 from Critic import Critic
 from OUProcess import OUProcess
 from arguments import args
 
-class Agent:
-    def __init__(self):
-        self.sess = tf.Session()
-        self.actor = ShadowNet(lambda: Actor(self.sess, 2, 1, 1e-4), args.tau, "actor")
+class Agent(BasicAgent):
+    def __init__(self, input_dim, output_dim):
+        self.actor = ShadowNet(lambda: Actor(input_dim, output_dim, 1e-4), args.tau, "actor")
         self.actor.origin._finish_origin()
-        self.critic = ShadowNet(lambda: Critic(self.sess, 2, 1, 1e-3), args.tau, "critic")
+        self.critic = ShadowNet(lambda: Critic(input_dim, output_dim, 1e-3), args.tau, "critic")
         self.critic.origin._finish_origin()
         self.summary_writer = tf.train.SummaryWriter(args.log_dir)
 
         self.saver = tf.train.Saver()
         if args.mode == "train" and args.init:
             logging.info("Initialize variables...")
-            self.sess.run(tf.initialize_all_variables())
-            self.sess.run([self.critic.op_shadow_init])
+            tf.get_default_session().run(tf.initialize_all_variables())
+            tf.get_default_session().run([self.critic.op_shadow_init])
         else:
             logging.info("Restore variables...")
-            self.saver.restore(self.sess, args.model_dir)
+            self.saver.restore(tf.get_default_session(), args.model_dir)
 
         self.replay_buffer = ReplayBuffer(1000000)
         self.noise_decay = 1
         self.noise_count = 0
 
-    def reset(self):
+    def reset(self, save=False):
         self.noise = OUProcess()
         self.noise_count += 1
         if self.noise_count % 100 == 0:
             self.noise_decay *= 0.8
-        self.saver.save(self.sess, args.model_dir)
+        if save:
+            self.saver.save(tf.get_default_session(), args.model_dir)
 
     def feedback(self, state, action, reward, done, new_state):
         reward = np.array([reward])
@@ -72,7 +73,7 @@ class Agent:
             #     print grads[i] - grads[i + l // 2]
             # exit()
 
-            self.sess.run([self.actor.op_shadow_train, self.critic.op_shadow_train])
+            tf.get_default_session().run([self.actor.op_shadow_train, self.critic.op_shadow_train])
 
     def action(self, state, show=False):
         # if len(self.replay_buffer.queue) >= 10:

@@ -8,14 +8,13 @@ from adaptors import find_adaptor
 
 def main():
     logging.root.setLevel(logging.INFO)
-    logging.warning("Environment: %s" % (args.env))
-    logging.warning("Agent: %s" % (args.agent))
 
     env = gym.make(args.env)
     if args.monitor != "":
         env.monitor.start(args.monitor)
     # logging.warning("action space: %s, %s, %s" % (env.action_space, env.action_space.high, env.action_space.low))
 
+    logging.warning("Making new agent: %s" % (args.agent))
     adaptor = find_adaptor()(env)
     agent = find_agent()(adaptor.input_dim, adaptor.output_dim)
 

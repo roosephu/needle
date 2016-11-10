@@ -34,26 +34,12 @@ class Agent(BasicAgent):
             self.saver.save(tf.get_default_session(), args.model_dir)
 
     def action(self, state, show=False):
-        '''
-            Input:
-                @state: of shape (1, input_dim)
-            Output:
-                @action: of shape (1, )
-        '''
         action = self.model.origin.infer(np.array([state]))
         # self.values.append(value[0])
         # print np.max(action[0][0])
         return np.array([np.random.choice(len(action[0][0]), p=action[0][0])])
 
     def feedback(self, state, action, reward, done, new_state):
-        '''
-            Input:
-                @state: of shape (1, input_dim)
-                @action: of shape (1, )
-                @reward: integer
-                @done: boolean
-                @new_state: of shape (1, input_dim)
-        '''
         reward = np.array([reward])
 
         experience = state, action, reward, new_state
