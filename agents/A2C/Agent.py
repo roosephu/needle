@@ -5,7 +5,7 @@ from arguments import args
 from Model import Model
 from agents.Agent import BasicAgent
 from helper.ReplayBuffer import ReplayBuffer
-from helper.ShadowNet2 import ShadowNet
+from helper.ShadowNet import ShadowNet
 
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):

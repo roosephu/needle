@@ -6,8 +6,12 @@ import numpy as np
 class Actor(Sunlit):
     def __init__(self, state_dim, action_dim, learning_rate):
         self.learning_rate = learning_rate
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+
+    def build_infer(self):
         # build critic network
-        self.op_states = tf.placeholder(tf.float32, [None, state_dim])
+        self.op_states = tf.placeholder(tf.float32, [None, self.state_dim])
 
         h1 = tf.contrib.layers.fully_connected(
             inputs=self.op_states,
@@ -25,11 +29,13 @@ class Actor(Sunlit):
         )
         self.op_actions = tf.contrib.layers.fully_connected(
             inputs=h2,
-            num_outputs=action_dim,
+            num_outputs=self.action_dim,
             biases_initializer=tf.random_normal_initializer(stddev=0.01),
             # normalizer_fn=tf.contrib.layers.batch_norm,
             activation_fn=tf.nn.tanh,
         )
+
+    def build_train(self):
 
         self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name)
         regularization = tf.contrib.layers.apply_regularization(
@@ -37,12 +43,14 @@ class Actor(Sunlit):
             self.variables,
         )
 
-        self.op_grad_actions = tf.placeholder(tf.float32, [None, action_dim])
+        self.op_grad_actions = tf.placeholder(tf.float32, [None, self.action_dim])
         self.op_loss = tf.reduce_sum(-self.op_grad_actions * self.op_actions) # + regularization
         self.op_summary = tf.merge_summary([
             tf.scalar_summary("actor loss", self.op_loss),
             tf.histogram_summary("actor", self.op_actions),
         ])
+
+        self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss)
 
     # def get_op_train(self):
     #     self.op_grads = tf.gradients(self.op_actions, self.variables, -self.op_grad_actions)

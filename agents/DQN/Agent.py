@@ -11,7 +11,6 @@ class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.output_dim = output_dim
         self.value = ShadowNet(lambda: Value(input_dim, output_dim, 1e-2), args.tau, "value")
-        self.value.origin._finish_origin()
         self.saver = tf.train.Saver()
 
         self.replay_buffer = ReplayBuffer(args.replay_buffer_size)

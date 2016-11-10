@@ -5,9 +5,12 @@ import numpy as np
 class Critic(Sunlit):
     def __init__(self, state_dim, action_dim, learning_rate):
         self.learning_rate = learning_rate
-        self.op_states = tf.placeholder(tf.float32, [None, state_dim])
-        self.op_actions = tf.placeholder(tf.float32, [None, action_dim])
-        self.op_rewards = tf.placeholder(tf.float32, [None])
+        self.action_dim = action_dim
+        self.state_dim = state_dim
+
+    def build_infer(self):
+        self.op_states = tf.placeholder(tf.float32, [None, self.state_dim])
+        self.op_actions = tf.placeholder(tf.float32, [None, self.action_dim])
         self.op_inputs = tf.concat(1, [self.op_states, self.op_actions])
 
         h1 = tf.contrib.layers.fully_connected(
@@ -31,6 +34,9 @@ class Critic(Sunlit):
             activation_fn=None,
         ), [-1])
 
+    def build_train(self):
+        self.op_rewards = tf.placeholder(tf.float32, [None])
+
         self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name)
         regularization = tf.contrib.layers.apply_regularization(
             tf.contrib.layers.l2_regularizer(0.01),
@@ -43,7 +49,7 @@ class Critic(Sunlit):
         ])
 
         self.op_grad_actions = tf.gradients(self.op_critic, self.op_actions)[0]
-
+        self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss)
 
     def train(self, states, actions, rewards):
         _ = tf.get_default_session().run(

@@ -2,8 +2,9 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Experiments on Reinforcement Learning")
 parser.add_argument("--env", help="environment name", required=True, type=str)
+parser.add_argument("--agent", help="which agent to play", required=True, type=str)
+parser.add_argument("--mode", help="inference or training (default infer)", required=True, type=str)
 parser.add_argument("--batch-size", help="configure batch size (default 10)", default=10, type=int)
-parser.add_argument("--mode", help="inference or training (default infer)", default="infer")
 parser.add_argument("--gamma", help="value discount per step (default 0.99)", default=0.99, type=float)
 parser.add_argument("--model-dir", help="directory to save models", default=None)
 parser.add_argument("--log-dir", help="directory to save logs", default=None)
@@ -16,7 +17,6 @@ parser.add_argument("--num-units", help="# hidden units for LSTM", default=100, 
 parser.add_argument("--GAE-decay", help="TD(lambda)", default=0.98, type=float)
 parser.add_argument("--replay-buffer-size", help="size of experience replay buffer", default=10000, type=int)
 parser.add_argument("--learning-rate", help="learning rate", default=1e-3, type=float)
-parser.add_argument("--agent", help="which agent to play", required=True, default="A2C", type=str)
 parser.set_defaults(init=True)
 args = parser.parse_args()
 

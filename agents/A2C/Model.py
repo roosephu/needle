@@ -4,7 +4,7 @@ import logging
 from arguments import args
 from Actor import Actor
 from Critic import Critic
-from helper.ShadowNet2 import Sunlit
+from helper.ShadowNet import Sunlit
 
 class Model(Sunlit):
     def __init__(self, state_dim, action_dim):

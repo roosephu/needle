@@ -6,38 +6,33 @@ class Sunlit:
     def __init__(self):
         pass
 
-    def _finish_origin(self):
-         self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss, name="train")
+    def build_infer(self):
+        raise UserWarning("No Inference Implemented")
 
-    # def init_operators(self, op_train=None, op_init=None):
-    #     if op_train != None:
-    #         self.op_train = op_train
-    #     else:
-    #         self.op_train = self.get_op_train()
+    def build_train(self):
+        raise UserWarning("No Training Implemented")
 
-    #     if op_init != None:
-    #         self.op_init = op_init
-    #     else:
-    #         variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name)
-    #         self.op_init = tf.initialize_variables(variables, name="init")
 
 class ShadowNet:
     def __init__(self, create_model, tau, name):
         scope_name = "shadow_net_" + name
         with tf.variable_scope(scope_name):
             with tf.variable_scope("origin") as origin_scope:
-                origin_model = create_model()
-                origin_model.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name)
+                self.origin = create_model()
+                self.origin.build_infer()
+                self.origin.build_train()
 
             with tf.variable_scope("shadow") as shadow_scope:
-                shadow_model = create_model()
+                self.shadow = create_model()
+                self.shadow.build_infer()
                 all_variables = {var.name: var for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)}
+                shadow_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=tf.get_variable_scope().name)
 
                 updates, inits = [], []
-                for origin_var in origin_model.variables:
+                for shadow_var in shadow_variables:
                     # logging.info("%s" % (origin_var.name))
-                    suffix = origin_var.name[len(origin_scope.name):]
-                    shadow_var = all_variables[origin_var.name[:len(origin_scope.name) - len("origin")] + "shadow" + suffix]
+                    suffix = shadow_var.name[len(origin_scope.name):]
+                    origin_var = all_variables[shadow_var.name[:len(origin_scope.name) - len("shadow")] + "origin" + suffix]
                     logging.debug("%s %s" % (origin_var.name, shadow_var.name))
                     updates.append(tf.assign(shadow_var, shadow_var * (1 - tau) + tau * origin_var))
                     inits.append(tf.assign(shadow_var, origin_var))
@@ -45,5 +40,3 @@ class ShadowNet:
                 self.op_shadow_train = tf.group(*updates, name="train")
                 self.op_shadow_init  = tf.group(*inits  , name="init")
 
-        self.origin = origin_model
-        self.shadow = shadow_model

@@ -12,9 +12,7 @@ from arguments import args
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.actor = ShadowNet(lambda: Actor(input_dim, output_dim, 1e-4), args.tau, "actor")
-        self.actor.origin._finish_origin()
         self.critic = ShadowNet(lambda: Critic(input_dim, output_dim, 1e-3), args.tau, "critic")
-        self.critic.origin._finish_origin()
         self.summary_writer = tf.train.SummaryWriter(args.log_dir)
 
         self.replay_buffer = ReplayBuffer(1000000)
