@@ -10,28 +10,20 @@ from helper.ShadowNet2 import ShadowNet
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.model = ShadowNet(lambda: Model(input_dim, output_dim), args.tau, "A2C")
-        self.saver = tf.train.Saver()
-
-        if args.mode == "train" and args.init:
-            logging.info("Initializing variables...")
-            tf.get_default_session().run(tf.initialize_all_variables())
-            tf.get_default_session().run(self.model.op_shadow_init)
-        else:
-            logging.info("Restore variables...")
-            self.saver.restore(tf.get_default_session(), args.model_dir)
 
         self.buffer = []
-        # self.values = []
 
         self.replay_buffer = ReplayBuffer(args.replay_buffer_size)
 
-    def reset(self, save=False):
+    def init(self):
+        tf.get_default_session().run(tf.initialize_all_variables())
+        tf.get_default_session().run(self.model.op_shadow_init)
+
+    def reset(self):
         self.model.origin.reset()
         if len(self.buffer) != 0:
             self.add_to_replay_buffer()
         self.buffer = []
-        if save:
-            self.saver.save(tf.get_default_session(), args.model_dir)
 
     def action(self, state, show=False):
         action = self.model.origin.infer(np.array([state]))

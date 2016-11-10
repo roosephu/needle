@@ -1,7 +1,6 @@
+import logging
 import tensorflow as tf
 import gym
-import logging
-import numpy as np
 from arguments import args
 from agents import find_agent
 from adaptors import find_adaptor
@@ -18,10 +17,18 @@ def main():
     adaptor = find_adaptor()(env)
     agent = find_agent()(adaptor.input_dim, adaptor.output_dim)
 
+    saver = tf.train.Saver()
+    if args.mode == "train" and args.init:
+        logging.info("Initializing variables...")
+        agent.init()
+    else:
+        logging.info("Restore variables...")
+        saver.restore(tf.get_default_session(), args.model_dir)
+
     for iterations in range(args.iterations):
         if iterations % 10 == 0:
             logging.root.setLevel(logging.DEBUG)
-        agent.reset(save=iterations % 50 == 0)
+        agent.reset()
         state = env.reset()
 
         done = False
@@ -54,6 +61,9 @@ def main():
         logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
         if iterations % 10 == 0:
             logging.root.setLevel(logging.INFO)
+
+        if iterations % 50 == 0:
+            saver.save(tf.get_default_session(), args.model_dir)
 
     if args.monitor != "":
         env.monitor.close()

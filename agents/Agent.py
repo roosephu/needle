@@ -3,6 +3,9 @@ class BasicAgent:
     def __init__(self, input_dim, output_dim):
         pass
 
+    def init(self):
+        pass
+
     def reset(self, save=False):
         pass
 

@@ -17,26 +17,19 @@ class Agent(BasicAgent):
         self.critic.origin._finish_origin()
         self.summary_writer = tf.train.SummaryWriter(args.log_dir)
 
-        self.saver = tf.train.Saver()
-        if args.mode == "train" and args.init:
-            logging.info("Initialize variables...")
-            tf.get_default_session().run(tf.initialize_all_variables())
-            tf.get_default_session().run([self.critic.op_shadow_init])
-        else:
-            logging.info("Restore variables...")
-            self.saver.restore(tf.get_default_session(), args.model_dir)
-
         self.replay_buffer = ReplayBuffer(1000000)
         self.noise_decay = 1
         self.noise_count = 0
 
-    def reset(self, save=False):
+    def init(self):
+        tf.get_default_session().run(tf.initialize_all_variables())
+        tf.get_default_session().run([self.critic.op_shadow_init])
+
+    def reset(self):
         self.noise = OUProcess()
         self.noise_count += 1
         if self.noise_count % 100 == 0:
             self.noise_decay *= 0.8
-        if save:
-            self.saver.save(tf.get_default_session(), args.model_dir)
 
     def feedback(self, state, action, reward, done, new_state):
         reward = np.array([reward])

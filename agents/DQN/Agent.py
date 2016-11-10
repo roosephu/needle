@@ -14,21 +14,13 @@ class Agent(BasicAgent):
         self.value.origin._finish_origin()
         self.saver = tf.train.Saver()
 
-        if args.mode == "train" and args.init:
-            logging.info("Initialize variables...")
-            tf.get_default_session().run(tf.initialize_all_variables())
-            tf.get_default_session().run(self.value.op_shadow_init)
-        else:
-            logging.info("Restore variables...")
-            self.saver.restore(tf.get_default_session(), args.model_dir)
-
         self.replay_buffer = ReplayBuffer(args.replay_buffer_size)
         self.epsilon = args.epsilon
         logging.info("epsilon = %s" % (self.epsilon))
 
-    def reset(self, save=False):
-        if save:
-            self.saver.save(tf.get_default_session(), args.model_dir)
+    def init(self):
+        tf.get_default_session().run(tf.initialize_all_variables())
+        tf.get_default_session().run(self.value.op_shadow_init)
 
     def action(self, state, show=False):
         if np.random.rand() < self.epsilon:
