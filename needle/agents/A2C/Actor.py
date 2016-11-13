@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-class Actor:
+class Actor(object):
     def __init__(self, action_dim, num_units=100):
         self.scope = "actor"
         self.num_units = num_units

@@ -1,6 +1,6 @@
 import numpy as np
 
-class CopyAdaptor:
+class CopyAdaptor(object):
     def __init__(self, env):
         self.env = env
         self.input_dim = 1

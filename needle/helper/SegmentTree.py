@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Node:
     def __init__(self, value=None, lc=None, rc=None):
         self.lc = lc
@@ -31,6 +32,7 @@ class Node:
 
 null = Node()
 
+
 class SegmentTree:
     def __init__(self, size): # can only sample by weight
         self.size = size
@@ -54,6 +56,7 @@ class SegmentTree:
         if rand == None:
             rand = np.random.rand()
         return self.root.sample(0, self.size, rand * self.root.sum)
+
 
 def main():
     n = 1000

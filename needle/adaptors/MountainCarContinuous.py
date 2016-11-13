@@ -1,10 +1,10 @@
 import numpy as np
 
-class CartPoleAdaptor:
+class MountainCarContinuousAdaptor(object):
     def __init__(self, env):
         self.env = env
-        self.input_dim = 4
-        self.output_dim = 2
+        self.input_dim = 2
+        self.output_dim = 1
 
     def state(self, state):
         return np.array([state])

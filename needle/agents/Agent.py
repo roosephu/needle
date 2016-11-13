@@ -1,15 +1,15 @@
 
-class BasicAgent:
+class BasicAgent(object):
     def __init__(self, input_dim, output_dim):
         pass
 
     def init(self):
         pass
 
-    def reset(self, save=False):
+    def reset(self):
         pass
 
-    def action(self, state, show=False):
+    def action(self, state):
         '''
             Input:
                 @state: of shape (1, input_dim)

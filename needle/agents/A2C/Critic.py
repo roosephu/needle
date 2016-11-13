@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-class Critic:
+class Critic(object):
     def __init__(self, state_dim, num_units=100):
         self.scope = "critic"
         self.num_units = num_units

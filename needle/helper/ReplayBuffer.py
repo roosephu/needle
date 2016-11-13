@@ -1,6 +1,9 @@
 import numpy as np
-import random
-from SegmentTree import SegmentTree
+import gflags
+from needle.helper.SegmentTree import SegmentTree
+
+gflags.DEFINE_integer("replay_buffer_size", 10000, "size of experience replay buffer")
+
 
 class ReplayBuffer:
     def __init__(self, size): # default use priority

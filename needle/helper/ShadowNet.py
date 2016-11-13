@@ -1,6 +1,10 @@
-import tensorflow as tf
-import numpy as np
 import logging
+import tensorflow as tf
+import gflags
+
+gflags.DEFINE_float("tau", 0.001, "learning rate for update shadow nets")
+FLAGS = gflags.FLAGS
+
 
 class Sunlit:
     def __init__(self):

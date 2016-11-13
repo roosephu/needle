@@ -1,10 +1,12 @@
 import tensorflow as tf
 import numpy as np
 import logging
-from arguments import args
-from Actor import Actor
-from Critic import Critic
-from helper.ShadowNet import Sunlit
+import gflags
+from needle.agents.A2C.Actor import Actor
+from needle.agents.A2C.Critic import Critic
+from needle.helper.ShadowNet import Sunlit
+
+FLAGS = gflags.FLAGS
 
 class Model(Sunlit):
     def __init__(self, state_dim, action_dim):
@@ -12,7 +14,7 @@ class Model(Sunlit):
         self.action_dim = action_dim
 
     def build_infer(self):
-        self.lstm = tf.nn.rnn_cell.LSTMCell(args.num_units)
+        self.lstm = tf.nn.rnn_cell.LSTMCell(FLAGS.num_units)
         self.op_inputs = tf.placeholder(tf.float32, [None, None, self.state_dim])
 
         self.batch_size = tf.shape(self.op_inputs)[0]
@@ -28,7 +30,7 @@ class Model(Sunlit):
         # ), [batch_size, num_timesteps, args.num_units])
         # self.op_states = self.initial_state
 
-        self.critic = Critic(args.num_units)
+        self.critic = Critic(FLAGS.num_units)
         self.op_values = self.critic.values(self.op_outputs)
 
     def build_train(self):
@@ -38,7 +40,7 @@ class Model(Sunlit):
         self.op_logits = self.actor.actions(self.op_outputs)
         self.op_actions = tf.nn.softmax(self.op_logits)
 
-        self.learning_rate = args.learning_rate
+        self.learning_rate = FLAGS.learning_rate
         self.op_lengths = tf.placeholder(tf.int32, shape=[None, 1])
         # self.op_rewards = tf.placeholder(tf.float32, shape=[None, None])
         self.op_advantages = tf.placeholder(tf.float32, shape=[None, None])

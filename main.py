@@ -1,31 +1,44 @@
 import logging
 import tensorflow as tf
 import gym
-from arguments import args
-from agents import find_agent
-from adaptors import find_adaptor
+import gflags
+import sys
+from needle.agents import find_agent
+from needle.adaptors import find_adaptor
+
+gflags.DEFINE_string("mode", "infer", "inference or training (default infer)")
+gflags.DEFINE_integer("batch_size", 10, "configure batch size (default 10)")
+gflags.DEFINE_float("gamma", 0.99, "value discount per step")
+gflags.DEFINE_string("model_dir", "", "directory to save models")
+gflags.DEFINE_string("log_dir", "", "directory to save logs")
+gflags.DEFINE_boolean("train_without_init", False, "initialize all variables when training")
+gflags.DEFINE_string("monitor", "", "path to save recordings")
+gflags.DEFINE_integer("iterations", 10000, "# iterations to run")
+gflags.DEFINE_float("learning_rate", 1e-3, "learning rate")
+FLAGS = gflags.FLAGS
+
 
 def main():
     logging.root.setLevel(logging.INFO)
 
-    env = gym.make(args.env)
-    if args.monitor != "":
-        env.monitor.start(args.monitor)
+    env = gym.make(FLAGS.env)
+    if FLAGS.monitor != "":
+        env.monitor.start(FLAGS.monitor)
     # logging.warning("action space: %s, %s, %s" % (env.action_space, env.action_space.high, env.action_space.low))
 
-    logging.warning("Making new agent: %s" % (args.agent))
+    logging.warning("Making new agent: %s" % (FLAGS.agent,))
     adaptor = find_adaptor()(env)
     agent = find_agent()(adaptor.input_dim, adaptor.output_dim)
 
     saver = tf.train.Saver()
-    if args.mode == "train" and args.init:
+    if (FLAGS.mode == "train" and FLAGS.train_without_init) or FLAGS.model_dir == "":
         logging.info("Initializing variables...")
         agent.init()
     else:
         logging.info("Restore variables...")
-        saver.restore(tf.get_default_session(), args.model_dir)
+        saver.restore(tf.get_default_session(), FLAGS.model_dir)
 
-    for iterations in range(args.iterations):
+    for iterations in range(FLAGS.iterations):
         if iterations % 10 == 0:
             logging.root.setLevel(logging.DEBUG)
         agent.reset()
@@ -56,18 +69,19 @@ def main():
             #     print observation, action, info
 
         # if iterations % args.batch_size == 0:
-        if args.mode == "train":
+        if FLAGS.mode == "train":
             agent.train()
         logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
         if iterations % 10 == 0:
             logging.root.setLevel(logging.INFO)
 
-        if iterations % 50 == 0:
-            saver.save(tf.get_default_session(), args.model_dir)
+        if iterations % 50 == 0 and FLAGS.model_dir != "":
+            saver.save(tf.get_default_session(), FLAGS.model_dir)
 
-    if args.monitor != "":
+    if FLAGS.monitor != "":
         env.monitor.close()
 
 if __name__ == "__main__":
+    FLAGS(sys.argv)
     with tf.Session().as_default():
         main()

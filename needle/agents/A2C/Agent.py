@@ -1,19 +1,23 @@
 import tensorflow as tf
-import logging
 import numpy as np
-from arguments import args
-from Model import Model
-from agents.Agent import BasicAgent
-from helper.ReplayBuffer import ReplayBuffer
-from helper.ShadowNet import ShadowNet
+import gflags
+from needle.agents.A2C.Model import Model
+from needle.agents.Agent import BasicAgent
+from needle.helper.ReplayBuffer import ReplayBuffer
+from needle.helper.ShadowNet import ShadowNet
+
+gflags.DEFINE_integer("num_units", 100, "# hidden units for LSTM")
+gflags.DEFINE_float("GAE_decay", 0.96, "TD(lambda)")
+FLAGS = gflags.FLAGS
+
 
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
-        self.model = ShadowNet(lambda: Model(input_dim, output_dim), args.tau, "A2C")
+        self.model = ShadowNet(lambda: Model(input_dim, output_dim), FLAGS.tau, "A2C")
 
         self.buffer = []
 
-        self.replay_buffer = ReplayBuffer(args.replay_buffer_size)
+        self.replay_buffer = ReplayBuffer(FLAGS.replay_buffer_size)
 
     def init(self):
         tf.get_default_session().run(tf.initialize_all_variables())
@@ -52,20 +56,20 @@ class Agent(BasicAgent):
         # self.add_to_replay_buffer()
         # states, actions, rewards, dones = self.replay_buffer.sample(args.batch_size)
 
-        if len(self.replay_buffer) >= args.batch_size:
-            states, actions, rewards, lengths = self.replay_buffer.sample(args.batch_size)
+        if len(self.replay_buffer) >= FLAGS.batch_size:
+            states, actions, rewards, lengths = self.replay_buffer.sample(FLAGS.batch_size)
             # logging.info("%s %s %s %s" % (states.shape, lengths.shape, actions.shape, rewards.shape))
             # print states.shape, actions.shape, rewards.shape, dones.shape
 
             # advantages = rewards + args.gamma * values[1:] - values[:1]
             num_timesteps = states.shape[1]
 
-            mask = np.tile(np.arange(num_timesteps).reshape((1, -1)), (args.batch_size, 1)) < lengths
+            mask = np.tile(np.arange(num_timesteps).reshape((1, -1)), (FLAGS.batch_size, 1)) < lengths
             values = self.model.shadow.values(states) * mask
-            advantages = rewards + args.gamma * np.pad(values[:, 1:], [(0, 0), (0, 1)], "constant") - values
+            advantages = rewards + FLAGS.gamma * np.pad(values[:, 1:], [(0, 0), (0, 1)], "constant") - values
             for i in reversed(range(num_timesteps - 1)): # TODO should infer from shadow net
-                # Geenralized Advantage Estimator
-                advantages[:, i] += advantages[:, i + 1] * args.gamma * args.GAE_decay
+                # Generalized Advantage Estimator
+                advantages[:, i] += advantages[:, i + 1] * FLAGS.gamma * FLAGS.GAE_decay
             # print advantages[0, :3], values[0, :3]
 
             # logging.info("advantages = %s, rewards = %s, values = %s" % (advantages, rewards, values))

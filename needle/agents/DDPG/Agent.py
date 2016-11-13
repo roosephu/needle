@@ -1,23 +1,26 @@
 import tensorflow as tf
 import numpy as np
 import logging
-from helper.ReplayBuffer import ReplayBuffer
-from helper.ShadowNet import ShadowNet
-from agents.Agent import BasicAgent
-from Actor import Actor
-from Critic import Critic
-from OUProcess import OUProcess
-from arguments import args
+import gflags
+from needle.helper.ReplayBuffer import ReplayBuffer
+from needle.helper.ShadowNet import ShadowNet
+from needle.agents.Agent import BasicAgent
+from needle.agents.DDPG.Actor import Actor
+from needle.agents.DDPG.Critic import Critic
+from needle.helper.OUProcess import OUProcess
+FLAGS = gflags.FLAGS
 
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
-        self.actor = ShadowNet(lambda: Actor(input_dim, output_dim, 1e-4), args.tau, "actor")
-        self.critic = ShadowNet(lambda: Critic(input_dim, output_dim, 1e-3), args.tau, "critic")
-        self.summary_writer = tf.train.SummaryWriter(args.log_dir)
+        self.actor = ShadowNet(lambda: Actor(input_dim, output_dim, 1e-4), FLAGS.tau, "actor")
+        self.critic = ShadowNet(lambda: Critic(input_dim, output_dim, 1e-3), FLAGS.tau, "critic")
+        self.summary_writer = tf.train.SummaryWriter(FLAGS.log_dir)
 
         self.replay_buffer = ReplayBuffer(1000000)
         self.noise_decay = 1
         self.noise_count = 0
+
+        self.noise = None
 
     def init(self):
         tf.get_default_session().run(tf.initialize_all_variables())
@@ -37,13 +40,13 @@ class Agent(BasicAgent):
         self.replay_buffer.add(experience)
 
         if len(self.replay_buffer) >= 10000:
-            states, actions, rewards, dones, new_states = self.replay_buffer.sample(args.batch_size)
+            states, actions, rewards, dones, new_states = self.replay_buffer.sample(FLAGS.batch_size)
 
-            q_rewards = rewards + args.gamma * (1 - dones) * self.critic.shadow.infer(new_states, self.actor.shadow.infer(new_states))
+            q_rewards = rewards + FLAGS.gamma * (1 - dones) * self.critic.shadow.infer(new_states, self.actor.shadow.infer(new_states))
             # print q_rewards.T[:10]
             # if steps % 100 == 0:
             #     print states[:1], self.actor.origin.infer(states[:1]).T
-                # print state, self.actor.origin.infer(state).T
+            #     print state, self.actor.origin.infer(state).T
 
             self.critic.origin.train(states, actions, q_rewards)
 
