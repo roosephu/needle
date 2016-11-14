@@ -28,9 +28,8 @@ class Agent(BasicAgent):
         if np.random.rand() < self.epsilon:
             return np.array([np.random.randint(self.output_dim)])
         values = self.value.origin.infer(state)
-        # if show:
         action = np.argmax(values)
-        # logging.info("values = %s, action = %s" % (values, action))
+        # logging.debug("values = %s, action = %s" % (values, action))
         return np.array([action])
 
     def feedback(self, state, action, reward, done, new_state):
@@ -47,7 +46,8 @@ class Agent(BasicAgent):
             # logging.info("%s %s %s %s" % (states.shape, actions.shape, rewards.shape, dones.shape))
 
             optimal_actions = np.argmax(self.value.origin.infer(new_states), axis=1)
-            values = rewards + FLAGS.gamma * (1 - dones) * self.value.shadow.infer(new_states)[np.arange(FLAGS.batch_size), optimal_actions]
+            values = rewards + FLAGS.gamma * (1 - dones) * \
+                               self.value.shadow.infer(new_states)[np.arange(FLAGS.batch_size), optimal_actions]
 
             self.value.origin.train(states, actions, values)
             tf.get_default_session().run(self.value.op_shadow_train)

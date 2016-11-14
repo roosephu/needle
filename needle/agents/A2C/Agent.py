@@ -1,23 +1,30 @@
 import tensorflow as tf
 import numpy as np
 import gflags
+import logging
 from needle.agents.A2C.Model import Model
 from needle.agents.Agent import BasicAgent
 from needle.helper.ReplayBuffer import ReplayBuffer
 from needle.helper.ShadowNet import ShadowNet
+from needle.helper.OUProcess import OUProcess
 
 gflags.DEFINE_integer("num_units", 100, "# hidden units for LSTM")
 gflags.DEFINE_float("GAE_decay", 0.96, "TD(lambda)")
 FLAGS = gflags.FLAGS
 
 
+def softmax(x):
+    x -= np.max(x)
+    x = np.exp(x)
+    return x / np.sum(x)
+
+
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.model = ShadowNet(lambda: Model(input_dim, output_dim), FLAGS.tau, "A2C")
-
         self.buffer = []
-
         self.replay_buffer = ReplayBuffer(FLAGS.replay_buffer_size)
+        self.output_dim = output_dim
 
     def init(self):
         tf.get_default_session().run(tf.initialize_all_variables())
@@ -28,12 +35,13 @@ class Agent(BasicAgent):
         if len(self.buffer) != 0:
             self.add_to_replay_buffer()
         self.buffer = []
+        self.noise = OUProcess(shape=self.output_dim)
 
     def action(self, state, show=False):
-        action = self.model.origin.infer(np.array([state]))
-        # self.values.append(value[0])
-        # print np.max(action[0][0])
-        return np.array([np.random.choice(len(action[0][0]), p=action[0][0])])
+        logits = self.model.origin.infer(np.array([state]))[0][0]
+        noise = self.noise.next() * 0.
+        actions = softmax(logits + noise)
+        return np.array([np.random.choice(len(actions), p=actions)])
 
     def feedback(self, state, action, reward, done, new_state):
         reward = np.array([reward])
@@ -52,7 +60,7 @@ class Agent(BasicAgent):
         episode = tuple(map(lambda x: np.array([x]), (states, actions, rewards, np.array([num_timesteps]))))
         self.replay_buffer.add(episode)
 
-    def train_episode(self):
+    def train(self):
         # self.add_to_replay_buffer()
         # states, actions, rewards, dones = self.replay_buffer.sample(args.batch_size)
 
@@ -65,11 +73,13 @@ class Agent(BasicAgent):
             num_timesteps = states.shape[1]
 
             mask = np.tile(np.arange(num_timesteps).reshape((1, -1)), (FLAGS.batch_size, 1)) < lengths
-            values = self.model.shadow.values(states) * mask
-            advantages = rewards + FLAGS.gamma * np.pad(values[:, 1:], [(0, 0), (0, 1)], "constant") - values
+            values = self.model.origin.values(states) * mask
+            logging.info(values[0])
+            advantages = rewards + 0. # FLAGS.gamma * np.pad(values[:, 1:], [(0, 0), (0, 1)], "constant") - values
             for i in reversed(range(num_timesteps - 1)): # TODO should infer from shadow net
                 # Generalized Advantage Estimator
-                advantages[:, i] += advantages[:, i + 1] * FLAGS.gamma * FLAGS.GAE_decay
+                advantages[:, i] += advantages[:, i + 1] * FLAGS.gamma #  * FLAGS.GAE_decay
+            advantages -= values
             # print advantages[0, :3], values[0, :3]
 
             # logging.info("advantages = %s, rewards = %s, values = %s" % (advantages, rewards, values))

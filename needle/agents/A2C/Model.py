@@ -6,12 +6,16 @@ from needle.agents.A2C.Actor import Actor
 from needle.agents.A2C.Critic import Critic
 from needle.helper.ShadowNet import Sunlit
 
+gflags.DEFINE_float("entropy_penalty", 0.01, "entropy penalty for policy")
 FLAGS = gflags.FLAGS
+
 
 class Model(Sunlit):
     def __init__(self, state_dim, action_dim):
         self.state_dim = state_dim
         self.action_dim = action_dim
+
+        self.current_state = None
 
     def build_infer(self):
         self.lstm = tf.nn.rnn_cell.LSTMCell(FLAGS.num_units)
@@ -74,6 +78,8 @@ class Model(Sunlit):
         #     first_n=-1,
         # )
 
+        self.op_entropy_penalty = tf.nn.log_softmax(self.op_logits) * self.op_actions * FLAGS.entropy_penalty
+
         self.op_actor_loss = tf.reduce_mean(-advantages * op_actions_log_prob)
 
         regularization = tf.contrib.layers.apply_regularization(
@@ -81,7 +87,7 @@ class Model(Sunlit):
             tf.all_variables(), # TODO all trainable variables?
         )
 
-        self.op_loss = self.op_actor_loss + self.op_critic_loss #  + regularization
+        self.op_loss = self.op_actor_loss + self.op_entropy_penalty # + self.op_critic_loss #  + regularization
         self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss, name="train")
 
     def reset(self):
@@ -93,15 +99,15 @@ class Model(Sunlit):
         )
 
     def infer(self, inputs):
-        new_state, action = tf.get_default_session().run(
-            [self.op_states, self.op_actions],
+        new_state, logits = tf.get_default_session().run(
+            [self.op_states, self.op_logits],
             feed_dict={
                 self.op_inputs: inputs,
                 self.initial_state: self.current_state,
             }
         )
         self.current_state = new_state
-        return action
+        return logits
 
     def values(self, inputs):
         values = tf.get_default_session().run(

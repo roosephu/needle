@@ -53,7 +53,7 @@ class SegmentTree:
         self.root.update(0, self.size, pos, value, weight)
 
     def sample(self, rand=None):
-        if rand == None:
+        if rand is None:
             rand = np.random.rand()
         return self.root.sample(0, self.size, rand * self.root.sum)
 
