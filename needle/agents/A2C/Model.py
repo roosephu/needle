@@ -22,23 +22,25 @@ class Model(Sunlit):
         self.op_inputs = tf.placeholder(tf.float32, [None, None, self.state_dim])
 
         self.batch_size = tf.shape(self.op_inputs)[0]
+        self.num_timesteps = tf.shape(self.op_inputs)[1]
         self.initial_state = self.lstm.zero_state(self.batch_size, tf.float32)
+        # logging.info(self.op_inputs[:, 0, :].get_shape())
 
         # logging.info("shape of inputs: %s" % (self.op_inputs))
         self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+
         # self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
-        #     inputs=tf.reshape(self.op_inputs, [-1, state_dim]),
-        #     num_outputs=args.num_units,
+        #     inputs=tf.reshape(self.op_inputs, [-1, self.state_dim]),
+        #     num_outputs=FLAGS.num_units,
         #     # biases_initializer=tf.constant_initializer(),
         #     activation_fn=None,
-        # ), [batch_size, num_timesteps, args.num_units])
+        # ), [self.batch_size, self.num_timesteps, FLAGS.num_units])
         # self.op_states = self.initial_state
 
         self.critic = Critic(FLAGS.num_units)
         self.op_values = self.critic.values(self.op_outputs)
 
     def build_train(self):
-        self.num_timesteps = tf.shape(self.op_inputs)[1]
 
         self.actor = Actor(self.action_dim)
         self.op_logits = self.actor.actions(self.op_outputs)
@@ -53,7 +55,7 @@ class Model(Sunlit):
         self.op_choices = tf.placeholder(tf.int32, shape=[None, None])
 
         # self.op_advantages = (self.op_rewards - self.op_values) * (1 - self.op_dones)
-        self.op_critic_loss = tf.reduce_mean(-advantages * self.op_values)
+        self.op_critic_loss = tf.reduce_sum(-advantages * self.op_values)
 
         # self.op_logits = tf.Print(
         #     self.op_logits,
@@ -80,15 +82,27 @@ class Model(Sunlit):
 
         self.op_entropy_penalty = tf.nn.log_softmax(self.op_logits) * self.op_actions * FLAGS.entropy_penalty
 
-        self.op_actor_loss = tf.reduce_mean(-advantages * op_actions_log_prob)
+        self.op_actor_loss = tf.reduce_sum(-advantages * op_actions_log_prob)
 
         regularization = tf.contrib.layers.apply_regularization(
-            tf.contrib.layers.l2_regularizer(0.01),
+            tf.contrib.layers.l2_regularizer(0.1),
             tf.all_variables(), # TODO all trainable variables?
         )
 
-        self.op_loss = self.op_actor_loss + self.op_entropy_penalty # + self.op_critic_loss #  + regularization
-        self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss, name="train")
+        for var in tf.all_variables():
+            logging.info("var = %s" % (var.name,))
+
+        self.op_loss = self.op_actor_loss + self.op_critic_loss * 0.5 # + regularization # + self.op_entropy_penalty # #  + regularization
+        optimizer = tf.train.AdamOptimizer(self.learning_rate)
+
+        # grads_and_vars = optimizer.compute_gradients(self.op_loss)
+        # clipped_grads_and_vars = zip(
+        #     tf.clip_by_global_norm([grad for grad, _ in grads_and_vars], 10)[0],
+        #     [var for _, var in grads_and_vars],
+        # )
+        # print grads_and_vars, clipped_grads_and_vars
+        # self.op_train = optimizer.apply_gradients(clipped_grads_and_vars)
+        self.op_train = optimizer.minimize(self.op_loss)
 
     def reset(self):
         self.current_state = tf.get_default_session().run(
@@ -109,19 +123,21 @@ class Model(Sunlit):
         self.current_state = new_state
         return logits
 
-    def values(self, inputs):
+    def values(self, state, inputs):
         values = tf.get_default_session().run(
             self.op_values,
             feed_dict={
                 self.op_inputs: inputs,
+                self.initial_state: state,
             }
         )
         return values
 
-    def train(self, inputs, advantages, choices, lengths):
+    def train(self, initial_state, inputs, advantages, choices, lengths):
         tf.get_default_session().run(
             self.op_train,
             feed_dict={
+                self.initial_state: initial_state,
                 self.op_choices: choices,
                 self.op_inputs: inputs,
                 self.op_advantages: advantages,

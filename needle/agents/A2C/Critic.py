@@ -14,26 +14,29 @@ class Critic(object):
             h1 = tf.contrib.layers.fully_connected(
                 inputs=states,
                 num_outputs=self.num_units,
+                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=tf.nn.relu,
             )
             h2 = tf.contrib.layers.fully_connected(
                 inputs=h1,
                 num_outputs=self.num_units,
+                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=tf.nn.relu,
             )
-            self.op_values = tf.reshape(tf.contrib.layers.fully_connected(
-                inputs=states,
+            op_values = tf.reshape(tf.contrib.layers.fully_connected(
+                inputs=h2,
                 num_outputs=1,
+                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                 biases_initializer=tf.constant_initializer(),
                 activation_fn=None,
             ), tf.shape(states)[:-1])
 
-        return self.op_values
+        return op_values
 
     def infer(self, states):
-        with tf.variable_scope(self.scope, reuse=type(self.scope) != str) as self.scope:
+        with tf.variable_scope(self.scope, reuse=True):
             return tf.get_default_session().run(
                 self.op_values,
                 feed_dict={

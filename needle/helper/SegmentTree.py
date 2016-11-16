@@ -30,6 +30,15 @@ class Node:
         else:
             return self.rc.sample(m, r, weight - self.lc.sum)
 
+    def find(self, l, r, index):
+        if l + 1 == r:
+            return self.value
+        m = (l + r) // 2
+        if index < m:
+            return self.lc.find(l, m, index)
+        else:
+            return self.rc.find(m, r, index)
+
 null = Node()
 
 
@@ -56,6 +65,9 @@ class SegmentTree:
         if rand is None:
             rand = np.random.rand()
         return self.root.sample(0, self.size, rand * self.root.sum)
+
+    def find(self, index):
+        return self.root.find(0, self.size, index)
 
 
 def main():

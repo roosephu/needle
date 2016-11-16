@@ -31,15 +31,25 @@ class ReplayBuffer:
         values = [np.pad(v, zip(zeros, shape - v.shape), 'constant') for v in values]
         return np.concatenate(values)
 
-    def sample(self, batch_size):
-        samplings = []
-        for i in range(batch_size):
-            samplings.append(self.queue.sample()) # wouldn't use choice(, size=batch_size)
-
+    @staticmethod
+    def finalize(samplings):
         ret = []
         for i in range(len(samplings[0])):
             ret.append(ReplayBuffer.reshape([s[i] for s in samplings]))
         return ret
+
+    def sample(self, batch_size):
+        samplings = []
+        for i in range(batch_size):
+            samplings.append(self.queue.sample()) # wouldn't use choice(, size=batch_size)
+        return ReplayBuffer.finalize(samplings)
+
+    def latest(self, batch_size):
+        samplings = []
+        base = (self.index - batch_size + self.size) % self.size
+        for i in range(batch_size):
+            samplings.append(self.queue.find((base + i) % self.size))
+        return ReplayBuffer.finalize(samplings)
 
 def main():
     print ReplayBuffer.reshape([np.array([[1], [2]]), np.array([[2, 2], [3, 3], [4, 5]])])
