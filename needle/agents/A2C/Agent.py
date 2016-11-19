@@ -7,7 +7,7 @@ from needle.agents.Agent import BasicAgent
 from needle.helper.ReplayBuffer import ReplayBuffer
 from needle.helper.OUProcess import OUProcess
 
-gflags.DEFINE_integer("num_units", 100, "# hidden units for LSTM")
+gflags.DEFINE_integer("num_units", 50, "# hidden units for LSTM")
 gflags.DEFINE_float("GAE_decay", 0.96, "TD(lambda)")
 gflags.DEFINE_integer("t_max", 5, "how many steps each actor learner performs")
 gflags.DEFINE_float("noise_weight", 0., "OU noise applied on actions")
@@ -44,42 +44,42 @@ class Agent(BasicAgent):
     def action(self, inputs, show=False):
         logits = self.model.infer(np.array([inputs]))[0][0]
         noise = self.noise.next() * FLAGS.noise_weight
-        # logging.debug("logits = %s" % (logits))
         actions = softmax(logits + noise)
+        # actions = (actions + 0.01) / (self.output_dim * 0.01 + 1)
+        # logging.debug("logits = %s" % (logits - max(logits),))
         return np.array([np.random.choice(len(actions), p=actions)])
 
     def feedback(self, inputs, action, reward, done, new_inputs):
         self.counter += 1
         reward = np.array([reward])
+        # logging.debug("input = %s, action = %s, reward = %s" % (inputs, action, reward))
 
-        experience = inputs, action, reward, new_inputs
+        experience = inputs, self.model.current_state.h, action, reward, new_inputs
         self.buffer.add(experience)
 
         if done or self.counter == FLAGS.t_max:
             self.update(done)
 
     def update(self, done):
-        inputs, actions, rewards, new_inputs = self.buffer.latest(self.counter)
-        # last_cell, last_state = self.last_state
+        inputs, states, actions, rewards, new_inputs = self.buffer.latest(self.counter)
         # logging.info("inputs = %s, states = %s, rewards = %s, actions = %s, last cell = %s, last state = %s" %
         #              (inputs.shape, states.shape, rewards.shape, actions.shape, last_cell.shape, last_state.shape))
 
-        all_inputs = np.vstack([[inputs[0]], new_inputs])
-        # logging.info("inputs = %s, new_inputs = %s" % (inputs, new_inputs))
-        values = self.model.values(self.last_state, [all_inputs])[0]
-        # logging.info("values = %s" % (values.shape, ))
+        values = self.model.values([self.last_state], [np.vstack([inputs, new_inputs[-1:]])])[0]
 
         if done:
-            value = 0
+            values[-1] = 0
+            # value = 0
         else:
             value = values[-1]
+        value = values[-1]
 
         advantages = []
         for i in reversed(range(len(values) - 1)):
             value = rewards[i] + value * FLAGS.gamma
             advantages.append(value - values[i])
         advantages = np.array(list(reversed(advantages)))
-        logging.debug("a = %s, v = %s" % (advantages, values))
+        # logging.debug("advantages = %s, values = %s, actions = %s, inputs = %s" % (advantages, values, actions, inputs))
 
         # logging.info("advantages = %s, values = %s, sum = %s" % (advantages[:3], values[:3], sum(advantages)))
         lengths = np.array([self.counter])

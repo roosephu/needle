@@ -27,15 +27,22 @@ class Model(Sunlit):
         # logging.info(self.op_inputs[:, 0, :].get_shape())
 
         # logging.info("shape of inputs: %s" % (self.op_inputs))
-        self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        # self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
 
-        # self.op_outputs = tf.reshape(tf.contrib.layers.fully_connected(
-        #     inputs=tf.reshape(self.op_inputs, [-1, self.state_dim]),
-        #     num_outputs=FLAGS.num_units,
-        #     # biases_initializer=tf.constant_initializer(),
-        #     activation_fn=None,
-        # ), [self.batch_size, self.num_timesteps, FLAGS.num_units])
-        # self.op_states = self.initial_state
+        h = tf.contrib.layers.fully_connected(
+            inputs=self.op_inputs,
+            num_outputs=FLAGS.num_units,
+            biases_initializer=tf.constant_initializer(),
+            activation_fn=tf.nn.relu,
+        )
+        self.op_outputs = tf.contrib.layers.fully_connected(
+            inputs=h,
+            num_outputs=FLAGS.num_units,
+            biases_initializer=tf.constant_initializer(),
+            activation_fn=tf.nn.relu,
+        )
+        # self,op_outputs = tf.Print(self.op_outputs, [tf.reduce_sum(self.op_outputs)], message="sum")
+        self.op_states = self.initial_state
 
         self.critic = Critic(FLAGS.num_units)
         self.op_values = self.critic.values(self.op_outputs)
@@ -85,14 +92,14 @@ class Model(Sunlit):
         self.op_actor_loss = tf.reduce_sum(-advantages * op_actions_log_prob)
 
         regularization = tf.contrib.layers.apply_regularization(
-            tf.contrib.layers.l2_regularizer(0.1),
+            tf.contrib.layers.l2_regularizer(0.01),
             tf.all_variables(), # TODO all trainable variables?
         )
 
         for var in tf.all_variables():
             logging.info("var = %s" % (var.name,))
 
-        self.op_loss = self.op_actor_loss + self.op_critic_loss * 0.5 # + regularization # + self.op_entropy_penalty # #  + regularization
+        self.op_loss = self.op_actor_loss * 0.1 + self.op_critic_loss + self.op_entropy_penalty # #  + regularization
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
         # grads_and_vars = optimizer.compute_gradients(self.op_loss)

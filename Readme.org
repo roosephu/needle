@@ -29,5 +29,11 @@ Implementation for REINFORCE:
 Experimental A2C (*synchronous* advantage actor-critic) running on CartPole-v0. Note that A2C uses LSTM by default.
 
 #+BEGIN_SRC bash
-    main.py --env CartPole-v0 --mode train --agent A2C --learning_rate 0.001 --replay_buffer_size 200 --batch_size 200 --t_max 5 --num_units 50
+    main.py --env CartPole-v0 --mode train --agent A2C --learning_rate 0.001 --replay_buffer_size 200 --batch_size 200
+#+END_SRC
+
+Here is a gist of code showing how to run `Copy-v0` with A2C. It succeeds with probability about 0.7 after 4k-6k steps, or gets stuck at a local minimum where for some specific characters the agent would always go left. I find using small learning rate for actor helps find global minimum.
+
+#+BEGIN_SRC bash
+    python main.py --env Copy-v0 --mode train --agent A2C --learning_rate 0.001 --replay_buffer_size 200 --batch_size 200 --iterations 6000
 #+END_SRC

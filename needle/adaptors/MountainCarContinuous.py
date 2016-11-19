@@ -11,6 +11,3 @@ class MountainCarContinuousAdaptor(object):
 
     def to_env(self, action):
         return action[0]
-
-    def to_agent(self, action):
-        return np.array([action])

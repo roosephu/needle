@@ -26,7 +26,7 @@ class Critic(object):
                 activation_fn=tf.nn.relu,
             )
             op_values = tf.reshape(tf.contrib.layers.fully_connected(
-                inputs=h2,
+                inputs=states,
                 num_outputs=1,
                 # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
                 biases_initializer=tf.constant_initializer(),

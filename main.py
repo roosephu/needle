@@ -3,11 +3,13 @@ import tensorflow as tf
 import gym
 import gflags
 import sys
+import time
 from needle.agents import find_agent
 from needle.adaptors import find_adaptor
 
 gflags.DEFINE_string("mode", "infer", "inference or training (default infer)")
-gflags.DEFINE_integer("batch_size", 10, "configure batch size (default 10)")
+gflags.DEFINE_integer("batch_size", 10, "configure batch size")
+gflags.DEFINE_integer("save_step", 2000, "how many steps between saving")
 gflags.DEFINE_float("gamma", 0.99, "value discount per step")
 gflags.DEFINE_string("model_dir", "", "directory to save models")
 gflags.DEFINE_string("log_dir", "", "directory to save logs")
@@ -31,7 +33,7 @@ def main():
     agent = find_agent()(adaptor.input_dim, adaptor.output_dim)
 
     saver = tf.train.Saver()
-    if (FLAGS.mode == "train" and FLAGS.train_without_init) or FLAGS.model_dir == "":
+    if FLAGS.mode == "train" or not FLAGS.train_without_init or FLAGS.model_dir == "":
         logging.info("Initializing variables...")
         agent.init()
     else:
@@ -51,20 +53,24 @@ def main():
         while not done and steps < env.spec.timestep_limit:
             steps += 1
 
-            action = adaptor.to_env(agent.action(adaptor.state(state)))
+            model_state = adaptor.state(state)
+            model_action = agent.action(model_state)
+            action = adaptor.to_env(model_action)
             # logging.warning("action = %s" % (action))
             # if steps % 100 == 0:
             #     logging.warning(action[0])
             new_state, reward, done, info = env.step(action)
+            # logging.debug("state = %s, action = %s, reward = %s" % (model_state, action, reward))
             if steps == env.spec.timestep_limit:
                 done = False
-            agent.feedback(adaptor.state(state), adaptor.to_agent(action), reward, done, adaptor.state(new_state))
+            agent.feedback(model_state, model_action, reward, done, adaptor.state(new_state))
             state = new_state
 
             total_rewards += reward
-            # if iterations % 10 == 0 and steps % 1 == 0 and args.mode == "infer":
-            #     env.render()
-            #     logging.warning("step: #%d, action = %.3f, reward = %.3f, iteration = %d" % (steps, action[0], reward, iterations))
+            if iterations % 10 == 0 and steps % 1 == 0 and FLAGS.mode == "infer":
+                time.sleep(1)
+                env.render()
+                # logging.warning("step: #%d, action = %.3f, reward = %.3f, iteration = %d" % (steps, action[0], reward, iterations))
             # if episode == 0:
             #     print observation, action, info
 
@@ -75,7 +81,7 @@ def main():
         if iterations % 10 == 0:
             logging.root.setLevel(logging.INFO)
 
-        if iterations % 50 == 0 and FLAGS.model_dir != "":
+        if iterations % FLAGS.save_step == 0 and FLAGS.model_dir != "":
             saver.save(tf.get_default_session(), FLAGS.model_dir)
 
     if FLAGS.monitor != "":
