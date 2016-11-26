@@ -1,5 +1,6 @@
 import logging
 import tensorflow as tf
+import numpy as np
 import gym
 import gflags
 import sys
@@ -17,11 +18,16 @@ gflags.DEFINE_boolean("train_without_init", False, "initialize all variables whe
 gflags.DEFINE_string("monitor", "", "path to save recordings")
 gflags.DEFINE_integer("iterations", 10000, "# iterations to run")
 gflags.DEFINE_float("learning_rate", 1e-3, "learning rate")
+gflags.DEFINE_boolean("verbose", False, "to show all log")
 FLAGS = gflags.FLAGS
 
 
 def main():
-    logging.root.setLevel(logging.INFO)
+    np.set_printoptions(linewidth=1000)
+    if FLAGS.verbose:
+        logging.root.setLevel(logging.DEBUG)
+    else:
+        logging.root.setLevel(logging.INFO)
 
     env = gym.make(FLAGS.env)
     if FLAGS.monitor != "":
@@ -41,7 +47,7 @@ def main():
         saver.restore(tf.get_default_session(), FLAGS.model_dir)
 
     for iterations in range(FLAGS.iterations):
-        if iterations % 10 == 0:
+        if not FLAGS.verbose and iterations % 10 == 0:
             logging.root.setLevel(logging.DEBUG)
         agent.reset()
         state = env.reset()
@@ -78,7 +84,7 @@ def main():
         if FLAGS.mode == "train":
             agent.train()
         logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
-        if iterations % 10 == 0:
+        if not FLAGS.verbose and iterations % 10 == 0:
             logging.root.setLevel(logging.INFO)
 
         if iterations % FLAGS.save_step == 0 and FLAGS.model_dir != "":

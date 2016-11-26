@@ -1,20 +1,8 @@
-import gflags
-from needle.agents.A2C.Agent import Agent as A2CAgent
-from needle.agents.DDPG.Agent import Agent as DDPGAgent
-from needle.agents.DQN.Agent import Agent as DQNAgent
+from needle.agents.utils import BasicAgent, register_agent, find_agent
 
-gflags.DEFINE_string("agent", "", "which agent to play")
-FLAGS = gflags.FLAGS
+import needle.agents.TNPG.agent
+import needle.agents.TRPO.agent
+import needle.agents.A2C.agent
+import needle.agents.DQN.agent
+import needle.agents.DDPG.agent
 
-
-def find_agent():
-    if FLAGS.agent == "A2C":
-        agent = A2CAgent
-    elif FLAGS.agent == "DDPG":
-        agent = DDPGAgent
-    elif FLAGS.agent == "DQN":
-        agent = DQNAgent
-    else:
-        raise RuntimeError("No Agent Found.")
-
-    return agent

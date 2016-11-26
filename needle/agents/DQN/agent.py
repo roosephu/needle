@@ -2,18 +2,19 @@ import tensorflow as tf
 import logging
 import numpy as np
 import gflags
+from needle.agents import BasicAgent, register_agent
+from needle.agents.DQN.value import Value
 from needle.helper.ShadowNet import ShadowNet
 from needle.helper.ReplayBuffer import ReplayBuffer
-from needle.agents.Agent import BasicAgent
-from needle.agents.DQN.Value import Value
 
 gflags.DEFINE_float("epsilon", 0.05, "eps-greedy to explore")
 FLAGS = gflags.FLAGS
 
 
+@register_agent("DQN")
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
-        self.output_dim = output_dim
+        super(Agent, self).__init__(input_dim, output_dim)
         self.value = ShadowNet(lambda: Value(input_dim, output_dim, 1e-2), FLAGS.tau, "value")
         self.saver = tf.train.Saver()
 
@@ -47,7 +48,7 @@ class Agent(BasicAgent):
 
             optimal_actions = np.argmax(self.value.origin.infer(new_states), axis=1)
             values = rewards + FLAGS.gamma * (1 - dones) * \
-                               self.value.shadow.infer(new_states)[np.arange(FLAGS.batch_size), optimal_actions]
+                self.value.shadow.infer(new_states)[np.arange(FLAGS.batch_size), optimal_actions]
 
             self.value.origin.train(states, actions, values)
             tf.get_default_session().run(self.value.op_shadow_train)

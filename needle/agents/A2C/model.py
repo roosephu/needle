@@ -2,8 +2,8 @@ import tensorflow as tf
 import numpy as np
 import logging
 import gflags
-from needle.agents.A2C.Actor import Actor
-from needle.agents.A2C.Critic import Critic
+from needle.agents.A2C.actor import Actor
+from needle.agents.A2C.critic import Critic
 from needle.helper.ShadowNet import Sunlit
 
 gflags.DEFINE_float("entropy_penalty", 0.01, "entropy penalty for policy")
@@ -27,22 +27,22 @@ class Model(Sunlit):
         # logging.info(self.op_inputs[:, 0, :].get_shape())
 
         # logging.info("shape of inputs: %s" % (self.op_inputs))
-        # self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
 
-        h = tf.contrib.layers.fully_connected(
-            inputs=self.op_inputs,
-            num_outputs=FLAGS.num_units,
-            biases_initializer=tf.constant_initializer(),
-            activation_fn=tf.nn.relu,
-        )
-        self.op_outputs = tf.contrib.layers.fully_connected(
-            inputs=h,
-            num_outputs=FLAGS.num_units,
-            biases_initializer=tf.constant_initializer(),
-            activation_fn=tf.nn.relu,
-        )
-        # self,op_outputs = tf.Print(self.op_outputs, [tf.reduce_sum(self.op_outputs)], message="sum")
-        self.op_states = self.initial_state
+        # h = tf.contrib.layers.fully_connected(
+        #     inputs=self.op_inputs,
+        #     num_outputs=FLAGS.num_units,
+        #     biases_initializer=tf.constant_initializer(),
+        #     activation_fn=tf.nn.relu,
+        # )
+        # self.op_outputs = tf.contrib.layers.fully_connected(
+        #     inputs=h,
+        #     num_outputs=FLAGS.num_units,
+        #     biases_initializer=tf.constant_initializer(),
+        #     activation_fn=tf.nn.relu,
+        # )
+        # # self,op_outputs = tf.Print(self.op_outputs, [tf.reduce_sum(self.op_outputs)], message="sum")
+        # self.op_states = self.initial_state
 
         self.critic = Critic(FLAGS.num_units)
         self.op_values = self.critic.values(self.op_outputs)

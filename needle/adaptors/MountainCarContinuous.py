@@ -1,6 +1,9 @@
+from needle.adaptors import register_adaptor
 import numpy as np
 
-class MountainCarContinuousAdaptor(object):
+
+@register_adaptor("MountainCarContinuous-v0")
+class Adaptor(object):
     def __init__(self, env):
         self.env = env
         self.input_dim = 2

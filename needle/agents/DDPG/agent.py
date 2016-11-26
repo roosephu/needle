@@ -2,14 +2,16 @@ import tensorflow as tf
 import numpy as np
 import logging
 import gflags
+from needle.agents import BasicAgent, register_agent
+from needle.agents.DDPG.actor import Actor
+from needle.agents.DDPG.critic import Critic
 from needle.helper.ReplayBuffer import ReplayBuffer
 from needle.helper.ShadowNet import ShadowNet
-from needle.agents.Agent import BasicAgent
-from needle.agents.DDPG.Actor import Actor
-from needle.agents.DDPG.Critic import Critic
 from needle.helper.OUProcess import OUProcess
 FLAGS = gflags.FLAGS
 
+
+@register_agent("DDPG")
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.actor = ShadowNet(lambda: Actor(input_dim, output_dim, 1e-4), FLAGS.tau, "actor")
