@@ -7,53 +7,14 @@ from needle.agents.TNPG.model import Model
 from needle.helper.utils import softmax
 from needle.helper.OUProcess import OUProcess
 from needle.helper.ReplayBuffer import ReplayBuffer
+from needle.helper.ConjugateGradient import ConjugateGradientSolver
 
 # if program encounters NaN, decrease this value
-gflags.DEFINE_float("delta_KL", 0.001, "KL divergence between two sets of parameters")
+gflags.DEFINE_float("delta_KL", 0.0001, "KL divergence between two sets of parameters")
 FLAGS = gflags.FLAGS
 
 line_search_decay = 0.5
 
-
-def conjugate_gradient(mat_vec_prod, y, iterations=10):  # solve A x = y, given function x -> A x
-    # k = np.zeros(y.shape)
-    # A = np.zeros((10, 10))
-    # for i in range(10):
-    #     k[i] = 1.
-    #     # logging.debug("i = %s, Ay = %s" % (i, mat_vec_prod(y)))
-    #     A[:, i] = mat_vec_prod(k)
-    #     k[i] = 0.
-    # logging.debug("A = %s, rank(A) = %s" % (A, np.linalg.matrix_rank(A, 1e-4)))
-
-    r = y
-    l = r.dot(r)
-    b = r
-    x = np.zeros(y.shape)
-    eps = 1e-8
-
-    # regularization term Ax = y => (A + delta I) x = y, too large delta will do harm to FIM.
-    # Too small delta results in NaN
-    delta = 1e-4
-
-    limit = y.shape[0] * 1e-4 # early stop in the case A is not full rank
-    for k in range(iterations):
-        Ab = mat_vec_prod(b) + b * delta
-        bAb = b.dot(Ab)
-        alpha = l / (bAb + eps)
-        x = x + alpha * b
-        r = r - alpha * Ab
-        # logging.debug("Ab = %s, x = %s, b = %s" % (Ab, x, b))
-
-        new_l = r.dot(r)
-        # logging.debug("new l = %s, alpha = %s, bAb = %s, x = %s" % (new_l, alpha, bAb, x))
-        if new_l <= limit:
-            break
-        beta = new_l / (l + eps)
-        b = r + beta * b
-        l = new_l
-    # logging.debug("Ax - y = %s" % (mat_vec_prod(x) - y,))
-
-    return x, x.dot(y - r)
 
 def get_matrix(model, states, choices, advantages, num_paramters):
     func = lambda direction: model.fisher_vector_product(direction, [states], [choices], [advantages])
@@ -82,6 +43,7 @@ class Agent(BasicAgent):
 
         self.buffer = ReplayBuffer(FLAGS.replay_buffer_size)
         self.baseline = 20
+        self.CG_solver = ConjugateGradientSolver()
 
     def feedback(self, state, action, reward, done, new_state):
         self.counter += 1
@@ -124,17 +86,10 @@ class Agent(BasicAgent):
         # old_loss = self.model.get_loss([states], [choices], [advantages])
         # logging.info("old loss = %s" % (old_loss,))
 
-        # T = np.zeros((10, 10))
-        # for i in range(num_timesteps):
-        #     T += get_matrix(self.model, states[i:i + 1], choices[i:i + 1], advantages[i:i + 1], 10)
-        #     s, v, d = np.linalg.svd(T)
-        #     logging.debug("v  = %s" % (v / (i + 1),))
-        # T /= num_timesteps
-
         # T = get_matrix(self.model, states, choices, advantages, 10)
         # logging.debug("T = %s" % (np.linalg.inv(T),))
 
-        natural_gradient, dot_prod = conjugate_gradient(
+        natural_gradient, dot_prod = self.CG_solver.solve(
             lambda direction: self.model.fisher_vector_product(direction, [states], [choices], [advantages]),
             gradient,
         )
@@ -157,22 +112,22 @@ class Agent(BasicAgent):
         old_loss, old_KL, old_actions, _ = self.model.test([states], [choices], [advantages])
         # logging.info("old loss = %s, old KL = %s" % (old_loss, old_KL))
 
-        self.model.apply_delta(natural_gradient)
-
-        while True:
-            new_loss, new_KL, new_actions, var = self.model.test([states], [choices], [advantages], old_actions)
-            # logging.debug("new variables %s" % (var,))
-            # KL_divergence = np.mean(np.sum(old_actions * np.log(old_actions / new_actions), axis=2))
-            # logging.debug("    variables %s" % (variables - natural_gradient,))
-            # logging.debug("old_actions = %s" % (old_actions[0].T))
-            # logging.debug("new_actions = %s" % (new_actions[0].T))
-            # logging.debug("shape = %s" % (np.sum(old_actions * np.log(old_actions / new_actions), axis=2).shape,))
-
-            # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
-            if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
-                break
-            self.model.apply_delta(natural_gradient * (line_search_decay - 1))
-            natural_gradient *= line_search_decay
+        self.model.apply_grad(natural_gradient)
+        #
+        # while True:
+        #     new_loss, new_KL, new_actions, var = self.model.test([states], [choices], [advantages], old_actions)
+        #     # logging.debug("new variables %s" % (var,))
+        #     # KL_divergence = np.mean(np.sum(old_actions * np.log(old_actions / new_actions), axis=2))
+        #     # logging.debug("    variables %s" % (variables - natural_gradient,))
+        #     # logging.debug("old_actions = %s" % (old_actions[0].T))
+        #     # logging.debug("new_actions = %s" % (new_actions[0].T))
+        #     # logging.debug("shape = %s" % (np.sum(old_actions * np.log(old_actions / new_actions), axis=2).shape,))
+        #
+        #     # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
+        #     if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
+        #         break
+        #     self.model.apply_delta(natural_gradient * (line_search_decay - 1))
+        #     natural_gradient *= line_search_decay
 
         # self.model.apply_delta(-natural_gradient)
         # self.model.train(natural_gradient)  # TODO: check if it is SGD

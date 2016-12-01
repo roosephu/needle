@@ -27,22 +27,22 @@ class Model(Sunlit):
         # logging.info(self.op_inputs[:, 0, :].get_shape())
 
         # logging.info("shape of inputs: %s" % (self.op_inputs))
-        self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
+        # self.op_outputs, self.op_states = tf.nn.dynamic_rnn(self.lstm, self.op_inputs, initial_state=self.initial_state)
 
-        # h = tf.contrib.layers.fully_connected(
-        #     inputs=self.op_inputs,
-        #     num_outputs=FLAGS.num_units,
-        #     biases_initializer=tf.constant_initializer(),
-        #     activation_fn=tf.nn.relu,
-        # )
-        # self.op_outputs = tf.contrib.layers.fully_connected(
-        #     inputs=h,
-        #     num_outputs=FLAGS.num_units,
-        #     biases_initializer=tf.constant_initializer(),
-        #     activation_fn=tf.nn.relu,
-        # )
-        # # self,op_outputs = tf.Print(self.op_outputs, [tf.reduce_sum(self.op_outputs)], message="sum")
-        # self.op_states = self.initial_state
+        h = tf.contrib.layers.fully_connected(
+            inputs=self.op_inputs,
+            num_outputs=FLAGS.num_units,
+            biases_initializer=tf.constant_initializer(),
+            activation_fn=tf.nn.relu,
+        )
+        self.op_outputs = tf.contrib.layers.fully_connected(
+            inputs=h,
+            num_outputs=FLAGS.num_units,
+            biases_initializer=tf.constant_initializer(),
+            activation_fn=tf.nn.relu,
+        )
+        # self,op_outputs = tf.Print(self.op_outputs, [tf.reduce_sum(self.op_outputs)], message="sum")
+        self.op_states = self.initial_state
 
         self.critic = Critic(FLAGS.num_units)
         self.op_values = self.critic.values(self.op_outputs)
@@ -70,15 +70,7 @@ class Model(Sunlit):
         #     message="logits"
         # )
 
-        all_index = tf.range(self.batch_size * self.num_timesteps)
-        choice_index = all_index // self.num_timesteps * self.num_timesteps * self.action_dim \
-            + all_index % self.num_timesteps * self.action_dim \
-            + tf.reshape(self.op_choices, [-1])
-
-        op_actions_log_prob = tf.reshape(
-            tf.gather(tf.reshape(tf.nn.log_softmax(self.op_logits), [-1]), choice_index),
-            [self.batch_size, self.num_timesteps]
-        )
+        op_actions_log_prob = -tf.nn.sparse_softmax_cross_entropy_with_logits(self.op_logits, self.op_choices)
 
         # op_actions_prob = tf.Print(
         #     op_actions_prob,
@@ -93,11 +85,12 @@ class Model(Sunlit):
 
         regularization = tf.contrib.layers.apply_regularization(
             tf.contrib.layers.l2_regularizer(0.01),
-            tf.all_variables(), # TODO all trainable variables?
+            # tf.all_variables(), # TODO all trainable variables?
+            tf.global_variables(),
         )
 
-        for var in tf.all_variables():
-            logging.info("var = %s" % (var.name,))
+        # for var in tf.all_variables():
+        #     logging.info("var = %s" % (var.name,))
 
         self.op_loss = self.op_actor_loss * 0.1 + self.op_critic_loss + self.op_entropy_penalty # #  + regularization
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
