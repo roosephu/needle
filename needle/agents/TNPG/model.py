@@ -19,14 +19,14 @@ class Model(FisherVectorProduct):
         self.batch_size = tf.shape(self.op_inputs)[0]
         # logging.info(self.op_inputs[:, 0, :].get_shape())
 
-        # h = tf.contrib.layers.fully_connected(
-        #     inputs=self.op_inputs,
-        #     num_outputs=FLAGS.num_units,
-        #     # biases_initializer=None,
-        #     activation_fn=tf.nn.relu,
-        # )
-        self.op_logits = tf.contrib.layers.fully_connected(
+        h = tf.contrib.layers.fully_connected(
             inputs=self.op_inputs,
+            num_outputs=FLAGS.num_units,
+            # biases_initializer=None,
+            activation_fn=tf.nn.relu,
+        )
+        self.op_logits = tf.contrib.layers.fully_connected(
+            inputs=h,
             num_outputs=self.action_dim,
             # biases_initializer=None,
             activation_fn=None,
@@ -100,7 +100,7 @@ class Model(FisherVectorProduct):
         #     index += num_elements
 
         return tf.get_default_session().run(
-            [self.op_loss, self.op_kl_divergence, self.op_actions, self.op_variables],
+            [self.op_loss, self.op_kl_divergence, self.op_actions],
             feed_dict=feed_dict,
         )
 

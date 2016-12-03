@@ -46,7 +46,7 @@ def main():
         saver.restore(tf.get_default_session(), FLAGS.model_dir)
 
     for iterations in range(FLAGS.iterations):
-        if not FLAGS.verbose and iterations % 10 == 0:
+        if not FLAGS.verbose and iterations % FLAGS.batch_size == 0:
             logging.root.setLevel(logging.DEBUG)
         agent.reset()
         state = env.reset()
@@ -83,7 +83,7 @@ def main():
         if FLAGS.mode == "train":
             agent.train(done)
         logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
-        if not FLAGS.verbose and iterations % 10 == 0:
+        if not FLAGS.verbose and iterations % FLAGS.batch_size == 0:
             logging.root.setLevel(logging.INFO)
 
         if iterations % FLAGS.save_step == 0 and FLAGS.model_dir != "":

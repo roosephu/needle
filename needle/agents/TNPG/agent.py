@@ -65,7 +65,7 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
 
         # for i in reversed(range(num_timesteps - 1)):
         #     advantages[i] += advantages[i + 1] * FLAGS.gamma
-        # advantages = rewards * (np.expand_dims(lengths, 1) - self.baseline)
+        # advantages = rewards * (np.expand_dims(lengths, 1))
         advantages = np.cumsum(rewards[:, ::-1], axis=1)[:, ::-1]
         # logging.info("mask = %s" % (mask,))
         # logging.info("advantages = %s, rewards = %s" % (advantages[0], rewards[0]))
@@ -101,27 +101,28 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         # logging.debug("natgrad   = %s" % (natural_gradient,))
         # logging.info("variables = %s" % (variables,))
 
-        old_loss, old_KL, old_actions, _ = self.model.test(feed_dict)
+        old_loss, old_KL, old_actions = self.model.test(feed_dict)
         logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
 
         self.model.apply_grad(natural_gradient)
-        new_loss, new_KL, new_actions, _ = self.model.test(feed_dict)
-        logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
+        # new_loss, new_KL, new_actions = self.model.test(feed_dict, old_actions=old_actions)
+        # logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
         #
-        # while True:
-        #     new_loss, new_KL, new_actions, var = self.model.test([states], [choices], [advantages], old_actions)
-        #     # logging.debug("new variables %s" % (var,))
-        #     # KL_divergence = np.mean(np.sum(old_actions * np.log(old_actions / new_actions), axis=2))
-        #     # logging.debug("    variables %s" % (variables - natural_gradient,))
-        #     # logging.debug("old_actions = %s" % (old_actions[0].T))
-        #     # logging.debug("new_actions = %s" % (new_actions[0].T))
-        #     # logging.debug("shape = %s" % (np.sum(old_actions * np.log(old_actions / new_actions), axis=2).shape,))
-        #
-        #     # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
-        #     if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
-        #         break
-        #     self.model.apply_delta(natural_gradient * (line_search_decay - 1))
-        #     natural_gradient *= line_search_decay
+        while True:
+            new_loss, new_KL, new_actions = self.model.test(feed_dict, old_actions=old_actions)
+            logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
+            # logging.debug("new variables %s" % (var,))
+            # KL_divergence = np.mean(np.sum(old_actions * np.log(old_actions / new_actions), axis=2))
+            # logging.debug("    variables %s" % (variables - natural_gradient,))
+            # logging.debug("old_actions = %s" % (old_actions[0].T))
+            # logging.debug("new_actions = %s" % (new_actions[0].T))
+            # logging.debug("shape = %s" % (np.sum(old_actions * np.log(old_actions / new_actions), axis=2).shape,))
+
+            # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
+            if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
+                break
+            self.model.apply_grad(natural_gradient * (line_search_decay - 1))
+            natural_gradient *= line_search_decay
 
         # self.model.apply_delta(-natural_gradient)
         # self.model.train(natural_gradient)  # TODO: check if it is SGD
