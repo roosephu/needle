@@ -9,7 +9,6 @@ from needle.agents import find_agent
 from needle.adaptors import find_adaptor
 
 gflags.DEFINE_string("mode", "infer", "inference or training (default infer)")
-gflags.DEFINE_integer("batch_size", 10, "configure batch size")
 gflags.DEFINE_integer("save_step", 2000, "how many steps between saving")
 gflags.DEFINE_float("gamma", 0.99, "value discount per step")
 gflags.DEFINE_string("model_dir", "", "directory to save models")
@@ -82,7 +81,7 @@ def main():
 
         # if iterations % args.batch_size == 0:
         if FLAGS.mode == "train":
-            agent.train()
+            agent.train(done)
         logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
         if not FLAGS.verbose and iterations % 10 == 0:
             logging.root.setLevel(logging.INFO)

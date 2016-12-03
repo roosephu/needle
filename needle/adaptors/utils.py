@@ -7,12 +7,13 @@ FLAGS = gflags.FLAGS
 registered_adaptors = {}
 
 
-def register_adaptor(name):
+def register_adaptor(*names):
     def add(agent):
-        if name in registered_adaptors:
-            raise RuntimeError("Duplicated adaptor registered: %s" % (name,))
-        registered_adaptors[name] = agent
-        logging.info("Register adaptor %s" % (name,))
+        for name in names:
+            if name in registered_adaptors:
+                raise RuntimeError("Duplicated adaptor registered: %s" % (name,))
+            registered_adaptors[name] = agent
+            logging.info("Register adaptor %s" % (name,))
     return add
 
 

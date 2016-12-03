@@ -5,4 +5,4 @@ import needle.agents.TRPO.agent
 import needle.agents.A2C.agent
 import needle.agents.DQN.agent
 import needle.agents.DDPG.agent
-
+import needle.agents.REINFORCE.agent

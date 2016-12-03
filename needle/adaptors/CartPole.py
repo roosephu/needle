@@ -2,7 +2,7 @@ from needle.adaptors import register_adaptor
 import numpy as np
 
 
-@register_adaptor("CartPole-v0")
+@register_adaptor("CartPole-v0", "CartPole-v1")
 class Adaptor(object):
     def __init__(self, env):
         self.env = env

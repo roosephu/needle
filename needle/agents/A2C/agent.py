@@ -1,12 +1,11 @@
-import tensorflow as tf
-import numpy as np
 import gflags
-import logging
+import numpy as np
+
 from needle.agents import BasicAgent, register_agent
 from needle.agents.A2C.model import Model
-from needle.helper.ReplayBuffer import ReplayBuffer
+from needle.helper.buffer.ReplayBuffer import ReplayBuffer
 from needle.helper.OUProcess import OUProcess
-from needle.helper.utils import softmax
+from needle.helper.SoftmaxSampler import SoftmaxSampler
 
 gflags.DEFINE_integer("num_units", 50, "# hidden units for LSTM")
 gflags.DEFINE_float("GAE_decay", 0.96, "TD(lambda)")
@@ -16,7 +15,7 @@ FLAGS = gflags.FLAGS
 
 
 @register_agent("A2C")
-class Agent(BasicAgent):
+class Agent(BasicAgent, SoftmaxSampler):
     def __init__(self, input_dim, output_dim):
         # we don't need ShadowNet
         # ShadowNet(lambda: Model(input_dim, output_dim), FLAGS.tau, "A2C")
@@ -30,16 +29,14 @@ class Agent(BasicAgent):
 
     def reset(self):
         self.model.reset()
-        self.noise = OUProcess(shape=self.output_dim)
+        self.noise = OUProcess(sigma=FLAGS.noise_weight, shape=self.output_dim)
         self.last_state = self.model.current_state
 
     def action(self, inputs, show=False):
-        logits = self.model.infer(np.array([inputs]))[0][0]
-        noise = self.noise.next() * FLAGS.noise_weight
-        actions = softmax(logits + noise)
-        # actions = (actions + 0.01) / (self.output_dim * 0.01 + 1)
-        logging.debug("logits = %s" % (logits - max(logits),))
-        return np.array([np.random.choice(len(actions), p=actions)])
+        return self.softmax_action(
+            self.model.infer(np.array([inputs])),
+            noise=self.noise,
+        )
 
     def feedback(self, inputs, action, reward, done, new_inputs):
         self.counter += 1

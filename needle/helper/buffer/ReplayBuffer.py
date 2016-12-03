@@ -1,6 +1,7 @@
-import numpy as np
 import gflags
-from needle.helper.SegmentTree import SegmentTree
+import numpy as np
+
+from needle.helper.buffer.SegmentTree import SegmentTree
 
 gflags.DEFINE_integer("replay_buffer_size", 10000, "size of experience replay buffer")
 

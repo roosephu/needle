@@ -1,13 +1,16 @@
-import tensorflow as tf
-import numpy as np
 import logging
+
 import gflags
+import numpy as np
+import tensorflow as tf
+
 from needle.agents import BasicAgent, register_agent
 from needle.agents.DDPG.actor import Actor
 from needle.agents.DDPG.critic import Critic
-from needle.helper.ReplayBuffer import ReplayBuffer
-from needle.helper.ShadowNet import ShadowNet
+from needle.helper.buffer.ReplayBuffer import ReplayBuffer
 from needle.helper.OUProcess import OUProcess
+from needle.helper.ShadowNet import ShadowNet
+
 FLAGS = gflags.FLAGS
 
 

@@ -1,26 +1,26 @@
-import numpy as np
-import tensorflow as tf
-import logging
 import gflags
+import logging
+import numpy as np
+
 from needle.agents import BasicAgent, register_agent
 from needle.agents.TNPG.model import Model
-from needle.helper.utils import softmax
-from needle.helper.OUProcess import OUProcess
-from needle.helper.ReplayBuffer import ReplayBuffer
 from needle.helper.ConjugateGradient import ConjugateGradientSolver
+from needle.helper.OUProcess import OUProcess
+from needle.helper.SoftmaxSampler import SoftmaxSampler
+from needle.helper.Batcher import Batcher
 
 # if program encounters NaN, decrease this value
-gflags.DEFINE_float("delta_KL", 0.0001, "KL divergence between two sets of parameters")
+gflags.DEFINE_float("delta_KL", 0.01, "KL divergence between two sets of parameters")
 FLAGS = gflags.FLAGS
 
 line_search_decay = 0.5
 
 
-def get_matrix(model, states, choices, advantages, num_paramters):
+def get_matrix(model, states, choices, advantages, num_parameters):
     func = lambda direction: model.fisher_vector_product(direction, [states], [choices], [advantages])
-    A = np.zeros((num_paramters, num_paramters))
-    k = np.zeros(num_paramters)
-    for i in range(num_paramters):
+    A = np.zeros((num_parameters, num_parameters))
+    k = np.zeros(num_parameters)
+    for i in range(num_parameters):
         k[i] = 1.
         A[:, i] = func(k)
         k[i] = 0.
@@ -31,7 +31,7 @@ def get_matrix(model, states, choices, advantages, num_paramters):
 
 
 @register_agent("TNPG")
-class Agent(BasicAgent):
+class Agent(SoftmaxSampler, Batcher, BasicAgent):
     def __init__(self, input_dim, output_dim):
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -41,22 +41,12 @@ class Agent(BasicAgent):
         self.model.build_infer()
         self.model.build_train()
 
-        self.buffer = ReplayBuffer(FLAGS.replay_buffer_size)
         self.baseline = 20
         self.CG_solver = ConjugateGradientSolver()
 
-    def feedback(self, state, action, reward, done, new_state):
-        self.counter += 1
-        reward = np.array([reward])
-
-        experience = state, action, reward
-        self.buffer.add(experience)
-
-        if done or self.counter == 200:
-            self.update()
-
-    def update(self):
-        states, choices, rewards = self.buffer.latest(self.counter)
+    def train_batch(self, lengths, mask, states, choices, rewards, new_states):
+        # logging.info("lengths = %s, mask = %s, states = %s, choices = %s, rewards = %s, new_states = %s" %
+        #              (lengths.shape, mask.shape, states.shape, choices.shape, rewards.shape, new_states.shape))
 
         # old_logits = self.model.infer([states])
         # logging.debug("old logits = %s" % (old_logits,))
@@ -73,16 +63,18 @@ class Agent(BasicAgent):
         #     g += states[i].reshape(4, 1).dot((pi * (1 - pi)).reshape(1, 2))
         # logging.info("computed = %s" % (g))
 
-        advantages = rewards[:]
-        num_timesteps = len(advantages)
         # for i in reversed(range(num_timesteps - 1)):
         #     advantages[i] += advantages[i + 1] * FLAGS.gamma
-        advantages *= num_timesteps - self.baseline
+        # advantages = rewards * (np.expand_dims(lengths, 1) - self.baseline)
+        advantages = np.cumsum(rewards[:, ::-1], axis=1)[:, ::-1]
+        # logging.info("mask = %s" % (mask,))
+        # logging.info("advantages = %s, rewards = %s" % (advantages[0], rewards[0]))
+        feed_dict = self.model.get_dict(lengths, mask, states, choices, advantages)
 
         # very important! which value to be chosen remains, however, requires more experiments.
-        self.baseline = self.baseline * 0.9 + num_timesteps * 0.1
+        self.baseline = self.baseline * 0.9 + np.mean(lengths) * 0.1
 
-        gradient = self.model.gradient([states], [choices], [advantages])
+        gradient = self.model.gradient(feed_dict)
         # old_loss = self.model.get_loss([states], [choices], [advantages])
         # logging.info("old loss = %s" % (old_loss,))
 
@@ -90,10 +82,10 @@ class Agent(BasicAgent):
         # logging.debug("T = %s" % (np.linalg.inv(T),))
 
         natural_gradient, dot_prod = self.CG_solver.solve(
-            lambda direction: self.model.fisher_vector_product(direction, [states], [choices], [advantages]),
+            lambda direction: self.model.fisher_vector_product(direction, feed_dict),
             gradient,
         )
-        natural_gradient *= np.sqrt(2 * FLAGS.delta_KL / dot_prod)
+        natural_gradient *= np.sqrt(2 * FLAGS.delta_KL / (dot_prod + 1e-8))
         variables = self.model.get_variables()
 
         # logging.debug("gradient = %s" % (gradient,))
@@ -109,10 +101,12 @@ class Agent(BasicAgent):
         # logging.debug("natgrad   = %s" % (natural_gradient,))
         # logging.info("variables = %s" % (variables,))
 
-        old_loss, old_KL, old_actions, _ = self.model.test([states], [choices], [advantages])
-        # logging.info("old loss = %s, old KL = %s" % (old_loss, old_KL))
+        old_loss, old_KL, old_actions, _ = self.model.test(feed_dict)
+        logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
 
         self.model.apply_grad(natural_gradient)
+        new_loss, new_KL, new_actions, _ = self.model.test(feed_dict)
+        logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
         #
         # while True:
         #     new_loss, new_KL, new_actions, var = self.model.test([states], [choices], [advantages], old_actions)
@@ -137,12 +131,10 @@ class Agent(BasicAgent):
         # logging.info("KL divergence = %s" % (np.mean(np.sum(old_dist * np.log(old_dist / new_dist), axis=-1))))
 
     def action(self, inputs):
-        logits = self.model.infer(np.array([inputs]))[0][0]
-        noise = self.noise.next() * FLAGS.noise_weight
-        actions = softmax(logits + noise)
-        # actions = (actions + 0.01) / (self.output_dim * 0.01 + 1)
-        # logging.debug("logits = %s" % (logits - max(logits),))
-        return np.array([np.random.choice(len(actions), p=actions)])
+        return self.softmax_action(
+            self.model.infer(np.array([inputs])),
+            noise=self.noise,
+        )
 
     def reset(self):
         self.noise = OUProcess()

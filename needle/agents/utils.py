@@ -60,5 +60,5 @@ class BasicAgent(object):
         '''
         self.counter += 1
 
-    def train(self):
+    def train(self, finished):
         pass

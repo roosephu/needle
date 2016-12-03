@@ -1,13 +1,11 @@
 import tensorflow as tf
-import numpy as np
-import logging
 import gflags
-from needle.helper.FisherVectorProduct import FisherVectorProduct
+from needle.helper.VariablesList import VariableList
 
 FLAGS = gflags.FLAGS
 
 
-class Model(FisherVectorProduct):
+class Net(VariableList):
     def __init__(self, state_dim, action_dim):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -44,18 +42,7 @@ class Model(FisherVectorProduct):
 
         self.op_loss = tf.reduce_sum(-self.op_advantages * op_actions_log_prob * self.op_mask) / \
                        tf.to_float(self.batch_size)
-        self.op_grad = self.flatten_gradient(self.op_loss)
-
-        # TRUE KL divergence should be the following. However, constants are ignored
-        # self.kl_divergence = self.old_distribution * tf.log(self.old_distribution / tf.nn.softmax(self.logits))
-
-        self.op_old_actions = tf.identity(self.op_actions)  # IMPORTANT tf.identity
-        self.op_kl_divergence = -tf.reduce_sum(
-            tf.stop_gradient(self.op_old_actions * tf.expand_dims(self.op_mask, 2)) * tf.nn.log_softmax(self.op_logits)
-        ) / tf.reduce_sum(self.op_length)
-
-        # Hessian-vector product
-        self.build_fisher_vector_product(self.op_kl_divergence)
+        self.op_train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.op_loss)
 
     def get_dict(self, lengths, mask, inputs, choices, advantages):
         return {
@@ -66,9 +53,6 @@ class Model(FisherVectorProduct):
             self.op_advantages: advantages,
         }
 
-    def fisher_vector_product(self, vec, feed_dict):
-        return self._infer_fisher_vector_product(vec, feed_dict)
-
     def infer(self, inputs):
         logits = tf.get_default_session().run(
             self.op_logits,
@@ -78,29 +62,11 @@ class Model(FisherVectorProduct):
         )
         return logits
 
-    def gradient(self, feed_dict):
-        return self.get_flat_gradient(
-            self.op_grad,
-            feed_dict=feed_dict,
-        )
-
     def reset(self):
         pass
 
-    def test(self, feed_dict, old_actions=None):
-        feed_dict = feed_dict.copy()
-        if old_actions is not None:
-            feed_dict[self.op_old_actions] = old_actions
-
-        # index = 0
-        # for var in self.variables:
-        #     shape = var.get_shape()
-        #     num_elements = int(np.prod(shape))
-        #     feed_dict[var] = variables[index:index + num_elements].reshape(shape)
-        #     index += num_elements
-
-        return tf.get_default_session().run(
-            [self.op_loss, self.op_kl_divergence, self.op_actions, self.op_variables],
-            feed_dict=feed_dict,
+    def train(self, feed_dict):
+        tf.get_default_session().run(
+            self.op_train,
+            feed_dict=feed_dict
         )
-
