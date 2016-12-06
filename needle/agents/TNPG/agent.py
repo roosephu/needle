@@ -3,11 +3,11 @@ import logging
 import numpy as np
 
 from needle.agents import BasicAgent, register_agent
-from needle.agents.TNPG.model import Model
-from needle.helper.ConjugateGradient import ConjugateGradientSolver
-from needle.helper.OUProcess import OUProcess
-from needle.helper.SoftmaxSampler import SoftmaxSampler
-from needle.helper.Batcher import Batcher
+from needle.agents.TNPG.net import Net
+from needle.helper.conjugate_gradient import conjugate_gradient
+from needle.helper.OU_process import OUProcess
+from needle.helper.softmax_sampler import SoftmaxSampler
+from needle.helper.batcher import Batcher
 
 # if program encounters NaN, decrease this value
 gflags.DEFINE_float("delta_KL", 0.01, "KL divergence between two sets of parameters")
@@ -37,12 +37,11 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         self.output_dim = output_dim
         self.counter = 0
 
-        self.model = Model(input_dim, output_dim)
-        self.model.build_infer()
-        self.model.build_train()
+        self.net = Net(input_dim, output_dim)
+        self.net.build_infer()
+        self.net.build_train()
 
         self.baseline = 20
-        self.CG_solver = ConjugateGradientSolver()
 
     def train_batch(self, lengths, mask, states, choices, rewards, new_states):
         # logging.info("lengths = %s, mask = %s, states = %s, choices = %s, rewards = %s, new_states = %s" %
@@ -69,24 +68,23 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         advantages = np.cumsum(rewards[:, ::-1], axis=1)[:, ::-1]
         # logging.info("mask = %s" % (mask,))
         # logging.info("advantages = %s, rewards = %s" % (advantages[0], rewards[0]))
-        feed_dict = self.model.get_dict(lengths, mask, states, choices, advantages)
+        feed_dict = self.net.get_dict(lengths, mask, states, choices, advantages)
 
-        # very important! which value to be chosen remains, however, requires more experiments.
         self.baseline = self.baseline * 0.9 + np.mean(lengths) * 0.1
 
-        gradient = self.model.gradient(feed_dict)
+        gradient = self.net.gradient(feed_dict)
         # old_loss = self.model.get_loss([states], [choices], [advantages])
         # logging.info("old loss = %s" % (old_loss,))
 
         # T = get_matrix(self.model, states, choices, advantages, 10)
         # logging.debug("T = %s" % (np.linalg.inv(T),))
 
-        natural_gradient, dot_prod = self.CG_solver.solve(
-            lambda direction: self.model.fisher_vector_product(direction, feed_dict),
+        natural_gradient, dot_prod = conjugate_gradient(
+            lambda direction: self.net.fisher_vector_product(direction, feed_dict),
             gradient,
         )
         natural_gradient *= np.sqrt(2 * FLAGS.delta_KL / (dot_prod + 1e-8))
-        variables = self.model.get_variables()
+        variables = self.net.get_variables()
 
         # logging.debug("gradient = %s" % (gradient,))
         # natural_gradient *= 0.1
@@ -101,15 +99,15 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         # logging.debug("natgrad   = %s" % (natural_gradient,))
         # logging.info("variables = %s" % (variables,))
 
-        old_loss, old_KL, old_actions = self.model.test(feed_dict)
+        old_loss, old_KL, old_actions = self.net.test(feed_dict)
         logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
 
-        self.model.apply_grad(natural_gradient)
+        self.net.apply_grad(natural_gradient)
         # new_loss, new_KL, new_actions = self.model.test(feed_dict, old_actions=old_actions)
         # logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
         #
         while True:
-            new_loss, new_KL, new_actions = self.model.test(feed_dict, old_actions=old_actions)
+            new_loss, new_KL, new_actions = self.net.test(feed_dict, old_actions=old_actions)
             logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
             # logging.debug("new variables %s" % (var,))
             # KL_divergence = np.mean(np.sum(old_actions * np.log(old_actions / new_actions), axis=2))
@@ -121,7 +119,7 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
             # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
             if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
                 break
-            self.model.apply_grad(natural_gradient * (line_search_decay - 1))
+            self.net.apply_grad(natural_gradient * (line_search_decay - 1))
             natural_gradient *= line_search_decay
 
         # self.model.apply_delta(-natural_gradient)
@@ -133,11 +131,11 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
 
     def action(self, inputs):
         return self.softmax_action(
-            self.model.infer(np.array([inputs])),
+            self.net.infer(np.array([inputs])),
             noise=self.noise,
         )
 
     def reset(self):
         self.noise = OUProcess()
-        self.model.reset()
+        self.net.reset()
         self.counter = 0

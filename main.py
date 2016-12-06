@@ -15,7 +15,7 @@ gflags.DEFINE_string("model_dir", "", "directory to save models")
 gflags.DEFINE_string("log_dir", "", "directory to save logs")
 gflags.DEFINE_boolean("train_without_init", False, "initialize all variables when training")
 gflags.DEFINE_string("monitor", "", "path to save recordings")
-gflags.DEFINE_integer("iterations", 10000, "# iterations to run")
+gflags.DEFINE_integer("iterations", 100000, "# iterations to run")
 gflags.DEFINE_float("learning_rate", 1e-3, "learning rate")
 gflags.DEFINE_boolean("verbose", False, "to show all log")
 FLAGS = gflags.FLAGS
@@ -82,7 +82,7 @@ def main():
         # if iterations % args.batch_size == 0:
         if FLAGS.mode == "train":
             agent.train(done)
-        logging.info("iteration #%d: total rewards = %.3f, steps = %d" % (iterations, total_rewards, steps))
+        logging.info("iteration #%4d: total rewards = %.3f" % (iterations, total_rewards))
         if not FLAGS.verbose and iterations % FLAGS.batch_size == 0:
             logging.root.setLevel(logging.INFO)
 

@@ -14,5 +14,5 @@ class SoftmaxSampler(object):
             logits = logits + noise.next()
         actions = softmax(logits)
         # actions = (actions + 0.01) / (self.output_dim * 0.01 + 1)
-        logging.debug("logits = %s" % (logits - max(logits),))
+        # logging.debug("logits = %s" % (logits - max(logits),))
         return np.array([np.random.choice(len(actions), p=actions)])

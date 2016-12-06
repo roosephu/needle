@@ -4,8 +4,8 @@ import numpy as np
 from needle.agents import BasicAgent, register_agent
 from needle.agents.A2C.model import Model
 from needle.helper.buffer.ReplayBuffer import ReplayBuffer
-from needle.helper.OUProcess import OUProcess
-from needle.helper.SoftmaxSampler import SoftmaxSampler
+from needle.helper.OU_process import OUProcess
+from needle.helper.softmax_sampler import SoftmaxSampler
 
 gflags.DEFINE_integer("num_units", 50, "# hidden units for LSTM")
 gflags.DEFINE_float("GAE_decay", 0.96, "TD(lambda)")

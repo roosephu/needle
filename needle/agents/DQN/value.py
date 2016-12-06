@@ -1,5 +1,5 @@
 import tensorflow as tf
-from needle.helper.ShadowNet import Sunlit
+from needle.helper.shadow_net import Sunlit
 
 class Value(Sunlit):
     def __init__(self, state_dim, action_dim, learning_rate):

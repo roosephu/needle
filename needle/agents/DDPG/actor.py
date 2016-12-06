@@ -1,4 +1,4 @@
-from needle.helper.ShadowNet import Sunlit
+from needle.helper.shadow_net import Sunlit
 import tensorflow as tf
 import numpy as np
 

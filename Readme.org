@@ -6,6 +6,7 @@ This is my personal implementation for several algorithms, some of which are cut
 3. [[https://arxiv.org/abs/1602.01783][Asynchronous Advantage Actor-Critic (A3C)]]
 4. [[http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf][REINFORCE]] (TBD)
 5. [[https://papers.nips.cc/paper/2073-a-natural-policy-gradient.pdf][Truncated Natural Policy Gradient (TNPG)]] (maybe I cited wrong paper since it doesn't use Conjugate Gradient to solve equations?)
+6. [[https://arxiv.org/pdf/1506.02438v5.pdf][Trust Region Policy Gradient with Generalized Advantage Estimation]]
 
 Some optimizations are used. [[https://arxiv.org/abs/1509.06461][Double DQN]] is implemented instead of traditional DQN.
 Furthermore, [[https://arxiv.org/abs/1511.05952][prioritized sampling]] is currently being developing.
@@ -22,33 +23,23 @@ I developed the library in an ancient MacBook Air (Mid 2013, i5 with 4G RAM) wit
 
 Few examples are available now, due to lots of bugs. However, DDPG may succeed now. All codes depend on OpenAI/gym and TensorFlow, so if you want to run any experiments, install them please.
 
-#+BEGIN_SRC bash
-    mkdir -p models/MountainCarContinuous-v0
-    python main.py --mode train --env MountainCarContinuous-v0 --agent DDPG
-#+END_SRC
-
-Implementation for REINFORCE:
+Examples commands:
 
 #+BEGIN_SRC bash
-    python main.py --env CartPole-v1 --mode train --agent REINFORCE --batch_size 10 --iterations 8000 --learning_rate 0.1
+    python main.py --mode train --agent DDPG      --env MountainCarContinuous-v0
+    python main.py --mode train --agent REINFORCE --env CartPole-v0               --batch_size 10 --iterations 8000 --learning_rate 0.1
+    python main.py --mode train --agent A2C       --env CartPole-v0               --replay_buffer_size 200 --batch_size 200
+    python main.py --mode train --agent A2C       --env Copy-v0                   --replay_buffer_size 200 --batch_size 200 --iterations 6000
+    python main.py --mode train --agent TNPG      --env Copy-v0                   --batch_size 10 --iterations 8000
+    python main.py --mode train --agent TRPO      --env Copy-v0                   --batch_size 10 --iterations 8000
 #+END_SRC
+
+* Notes
 
 Experimental A2C (*synchronous* advantage actor-critic) running on CartPole-v0. Note that A2C uses LSTM by default.
 
-#+BEGIN_SRC bash
-    main.py --env CartPole-v0 --mode train --agent A2C --learning_rate 0.001 --replay_buffer_size 200 --batch_size 200
-#+END_SRC
+A2C on `Copy-v0` succeeds with probability about 0.7 after 4k-6k steps, or gets stuck at a local minimum where for some specific characters the agent would always go left. I find using small learning rate for actor helps find global minimum.
 
-Here is a gist of code showing how to run `Copy-v0` with A2C. It succeeds with probability about 0.7 after 4k-6k steps, or gets stuck at a local minimum where for some specific characters the agent would always go left. I find using small learning rate for actor helps find global minimum.
-
-#+BEGIN_SRC bash
-    python main.py --env Copy-v0 --mode train --agent A2C --learning_rate 0.001 --replay_buffer_size 200 --batch_size 200 --iterations 6000
-#+END_SRC
-
-Solve Copy-v0 by TNPG in ~1k steps.
-
-#+BEGIN_SRC bash
-    python main.py --env Copy-v0 --mode train --agent TNPG --batch_size 10 --iterations 8000
-#+END_SRC
+TNPG sometiomes solves `Copy-v0` in ~1k steps. More experiments?
 
 Question: can we combine TNPG and A3C with LSTM? The actor network and critic network shares many weights and how to apply suitable gradient on them?

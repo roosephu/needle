@@ -4,7 +4,7 @@ import logging
 import gflags
 from needle.agents.A2C.actor import Actor
 from needle.agents.A2C.critic import Critic
-from needle.helper.ShadowNet import Sunlit
+from needle.helper.shadow_net import Sunlit
 
 gflags.DEFINE_float("entropy_penalty", 0.01, "entropy penalty for policy")
 FLAGS = gflags.FLAGS

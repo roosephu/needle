@@ -1,5 +1,5 @@
 import tensorflow as tf
-from needle.helper.AssignGradient import AssignGradient
+from needle.helper.assign_gradient import AssignGradient
 from cached_property import cached_property
 from needle.helper.utils import merge_dict
 

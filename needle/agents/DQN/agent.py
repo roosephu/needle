@@ -5,7 +5,7 @@ import tensorflow as tf
 from needle.agents import BasicAgent, register_agent
 from needle.agents.DQN.value import Value
 from needle.helper.buffer.ReplayBuffer import ReplayBuffer
-from needle.helper.ShadowNet import ShadowNet
+from needle.helper.shadow_net import ShadowNet
 
 gflags.DEFINE_float("epsilon", 0.05, "eps-greedy to explore")
 FLAGS = gflags.FLAGS

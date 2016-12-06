@@ -14,22 +14,14 @@ class Critic(object):
             h1 = tf.contrib.layers.fully_connected(
                 inputs=states,
                 num_outputs=self.num_units,
-                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
-                biases_initializer=tf.constant_initializer(),
-                activation_fn=tf.nn.relu,
             )
             h2 = tf.contrib.layers.fully_connected(
                 inputs=h1,
                 num_outputs=self.num_units,
-                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
-                biases_initializer=tf.constant_initializer(),
-                activation_fn=tf.nn.relu,
             )
             op_values = tf.reshape(tf.contrib.layers.fully_connected(
                 inputs=states,
                 num_outputs=1,
-                # weights_regularizer=tf.contrib.layers.l2_regularizer(0.01),
-                biases_initializer=tf.constant_initializer(),
                 activation_fn=None,
             ), tf.shape(states)[:-1])
 

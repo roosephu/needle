@@ -2,33 +2,32 @@ import tensorflow as tf
 import numpy as np
 import logging
 import gflags
-from needle.helper.FisherVectorProduct import FisherVectorProduct
+from needle.helper.fisher_vector_product import FisherVectorProduct
+from needle.helper.utils import merge_dict, declare_variables
 
 FLAGS = gflags.FLAGS
 
 
-class Model(FisherVectorProduct):
+class Net(FisherVectorProduct):
     def __init__(self, state_dim, action_dim):
+        self.scope = "actor"
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.learning_rate = FLAGS.learning_rate
 
+    @declare_variables
     def build_infer(self):
         self.op_inputs = tf.placeholder(tf.float32, [None, None, self.state_dim])
 
         self.batch_size = tf.shape(self.op_inputs)[0]
-        # logging.info(self.op_inputs[:, 0, :].get_shape())
 
         h = tf.contrib.layers.fully_connected(
             inputs=self.op_inputs,
             num_outputs=FLAGS.num_units,
-            # biases_initializer=None,
-            activation_fn=tf.nn.relu,
         )
         self.op_logits = tf.contrib.layers.fully_connected(
             inputs=h,
             num_outputs=self.action_dim,
-            # biases_initializer=None,
             activation_fn=None,
         )
         self.op_actions = tf.nn.softmax(self.op_logits)
@@ -88,19 +87,11 @@ class Model(FisherVectorProduct):
         pass
 
     def test(self, feed_dict, old_actions=None):
-        feed_dict = feed_dict.copy()
+        extra = {}
         if old_actions is not None:
-            feed_dict[self.op_old_actions] = old_actions
-
-        # index = 0
-        # for var in self.variables:
-        #     shape = var.get_shape()
-        #     num_elements = int(np.prod(shape))
-        #     feed_dict[var] = variables[index:index + num_elements].reshape(shape)
-        #     index += num_elements
+            extra[self.op_old_actions] = old_actions
 
         return tf.get_default_session().run(
             [self.op_loss, self.op_kl_divergence, self.op_actions],
-            feed_dict=feed_dict,
+            feed_dict=merge_dict(feed_dict, extra),
         )
-

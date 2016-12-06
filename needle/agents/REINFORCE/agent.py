@@ -4,9 +4,9 @@ import numpy as np
 
 from needle.agents import BasicAgent, register_agent
 from needle.agents.REINFORCE.net import Net
-from needle.helper.OUProcess import OUProcess
-from needle.helper.SoftmaxSampler import SoftmaxSampler
-from needle.helper.Batcher import Batcher
+from needle.helper.OU_process import OUProcess
+from needle.helper.softmax_sampler import SoftmaxSampler
+from needle.helper.batcher import Batcher
 
 FLAGS = gflags.FLAGS
 

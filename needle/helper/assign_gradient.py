@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from needle.helper.VariablesList import VariableList
+from needle.helper.variables_list import VariableList
 from cached_property import cached_property
 
 
