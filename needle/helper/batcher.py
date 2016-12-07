@@ -34,6 +34,6 @@ class Batcher(object):
                   np.array([rewards]), np.array([new_states])
         self._buffer.add(episode)
         # logging.info("buffer = %s" % (len(self._buffer)))
-        if len(self._buffer) == FLAGS.batch_size:
+        if len(self._buffer) >= FLAGS.batch_size:
             data = self._buffer.get()
             self.train_batch(*data)

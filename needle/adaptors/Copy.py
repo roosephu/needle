@@ -15,3 +15,5 @@ class Adaptor(object):
     def to_env(self, action):
         return [action[0] % 2, action[0] // 2 % 2, action[0] // 4]
 
+    def reset(self):
+        pass

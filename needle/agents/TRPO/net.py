@@ -42,7 +42,8 @@ class Net(FisherVectorProduct):
         op_actions_log_prob = -tf.nn.sparse_softmax_cross_entropy_with_logits(self.op_logits, self.op_choices)
 
         self.op_loss = tf.reduce_sum(-self.op_advantages * op_actions_log_prob * self.op_mask) / \
-                       tf.to_float(self.batch_size)
+                       tf.to_float(self.batch_size) + \
+                       tf.reduce_sum(self.op_actions * tf.nn.log_softmax(self.op_logits)) / tf.to_float(self.batch_size) * 0.1
         self.op_grad = self.flatten_gradient(self.op_loss)
 
         # TRUE KL divergence should be the following. However, constants are ignored

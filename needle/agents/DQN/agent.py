@@ -15,6 +15,8 @@ FLAGS = gflags.FLAGS
 class Agent(BasicAgent):
     def __init__(self, input_dim, output_dim):
         super(Agent, self).__init__(input_dim, output_dim)
+        # self.input_dim = input_dim
+        # self.output_dim = output_dim
         self.value = ShadowNet(lambda: Value(input_dim, output_dim, 1e-2), FLAGS.tau, "value")
         self.saver = tf.train.Saver()
 

@@ -37,6 +37,9 @@ def main():
     adaptor = find_adaptor()(env)
     agent = find_agent()(adaptor.input_dim, adaptor.output_dim)
 
+    op_rewards = tf.placeholder(tf.float32)
+    tf.summary.scalar("rewards", op_rewards)
+
     saver = tf.train.Saver()
     if FLAGS.mode == "train" or not FLAGS.train_without_init or FLAGS.model_dir == "":
         logging.info("Initializing variables...")
@@ -45,11 +48,19 @@ def main():
         logging.info("Restore variables...")
         saver.restore(tf.get_default_session(), FLAGS.model_dir)
 
+    merged = tf.summary.merge_all()
+    if tf.gfile.Exists(FLAGS.log_dir):
+        tf.gfile.DeleteRecursively(FLAGS.log_dir)
+    summary_writer = tf.train.SummaryWriter(FLAGS.log_dir)
+
     for iterations in range(FLAGS.iterations):
         if not FLAGS.verbose and iterations % FLAGS.batch_size == 0:
             logging.root.setLevel(logging.DEBUG)
         agent.reset()
+        adaptor.reset()
         state = env.reset()
+
+        model_state = adaptor.state(state)
 
         done = False
         total_rewards = 0
@@ -58,7 +69,6 @@ def main():
         while not done and steps < env.spec.timestep_limit:
             steps += 1
 
-            model_state = adaptor.state(state)
             model_action = agent.action(model_state)
             action = adaptor.to_env(model_action)
             # logging.warning("action = %s" % (action))
@@ -68,8 +78,10 @@ def main():
             # logging.debug("state = %s, action = %s, reward = %s" % (model_state, action, reward))
             if steps == env.spec.timestep_limit:
                 done = False
-            agent.feedback(model_state, model_action, reward, done, adaptor.state(new_state))
-            state = new_state
+
+            model_new_state = adaptor.state(new_state)
+            agent.feedback(model_state, model_action, reward, done, model_new_state)
+            model_state = model_new_state
 
             total_rewards += reward
             if iterations % 10 == 0 and steps % 1 == 0 and FLAGS.mode == "infer":
@@ -82,7 +94,13 @@ def main():
         # if iterations % args.batch_size == 0:
         if FLAGS.mode == "train":
             agent.train(done)
-        logging.info("iteration #%4d: total rewards = %.3f" % (iterations, total_rewards))
+
+        summary = tf.get_default_session().run(merged, feed_dict={
+            op_rewards: total_rewards,
+        })
+        summary_writer.add_summary(summary, iterations)
+
+        # logging.info("iteration #%4d: total rewards = %.3f" % (iterations, total_rewards))
         if not FLAGS.verbose and iterations % FLAGS.batch_size == 0:
             logging.root.setLevel(logging.INFO)
 

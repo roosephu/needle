@@ -35,7 +35,7 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
 
     def compute_advantage(self, values, mask, rewards):
         advantages = FLAGS.gamma * values[:, 1:] + rewards - values[:, :-1]
-        advantages = decay_cumsum(advantages[:, ::-1], FLAGS.GAE_lambda)[:, ::-1]
+        advantages = decay_cumsum(advantages[:, ::-1], FLAGS.gamma * FLAGS.GAE_lambda)[:, ::-1]
         return advantages
 
     def train_actor(self, values, lengths, mask, states, choices, rewards):
@@ -80,7 +80,7 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         deltas = np.array(deltas)
         rank = len(deltas)
 
-        # logging.info("values = %s, rewards = %s" % (values[0, :3], total_rewards[0, :3]))
+        logging.info("values = %s, rewards = %s" % (values[0, :3], total_rewards[0, :3]))
         # logging.info("variance: %s, deltas = %s" % (variance, deltas))
         # logging.info("rewards = %s" % (total_rewards,))
         variance = np.var(deltas)

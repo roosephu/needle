@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import gflags
 from needle.helper.fisher_vector_product import FisherVectorProduct
+from needle.helper.utils import declare_variables
 
 FLAGS = gflags.FLAGS
 
@@ -12,7 +13,9 @@ class Net(FisherVectorProduct):
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.learning_rate = FLAGS.learning_rate
+        self.scope = "actor"
 
+    @declare_variables
     def build_infer(self):
         self.op_inputs = tf.placeholder(tf.float32, [None, None, self.state_dim])
 

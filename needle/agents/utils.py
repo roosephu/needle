@@ -37,7 +37,7 @@ class BasicAgent(object):
         tf.get_default_session().run(tf.global_variables_initializer())
 
     def reset(self):
-        if self.noise_gen is not None:
+        if hasattr(self, "noise_gen") and self.noise_gen is not None:
             self.noise = self.noise_gen()
         self.counter = 0
 

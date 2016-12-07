@@ -4,7 +4,7 @@ This is my personal implementation for several algorithms, some of which are cut
 1. [[https://arxiv.org/abs/1312.5602][Deep Q-Network (DQN)]]
 2. [[https://arxiv.org/abs/1509.02971][Deep Deterministic Policy Gradient (DDPG)]]
 3. [[https://arxiv.org/abs/1602.01783][Asynchronous Advantage Actor-Critic (A3C)]]
-4. [[http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf][REINFORCE]] (TBD)
+4. [[http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf][REINFORCE]]
 5. [[https://papers.nips.cc/paper/2073-a-natural-policy-gradient.pdf][Truncated Natural Policy Gradient (TNPG)]] (maybe I cited wrong paper since it doesn't use Conjugate Gradient to solve equations?)
 6. [[https://arxiv.org/pdf/1506.02438v5.pdf][Trust Region Policy Gradient with Generalized Advantage Estimation]]
 
@@ -43,3 +43,7 @@ A2C on `Copy-v0` succeeds with probability about 0.7 after 4k-6k steps, or gets 
 TNPG sometiomes solves `Copy-v0` in ~1k steps. More experiments?
 
 Question: can we combine TNPG and A3C with LSTM? The actor network and critic network shares many weights and how to apply suitable gradient on them?
+
+5 independent runs of TNPG (batch size 10, delta_KL = 0.001):
+
+[[./doc/TNPG.png]]

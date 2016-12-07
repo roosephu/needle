@@ -12,7 +12,8 @@ class BatchBuffer:
         self.queue.append(experience)
 
     def __len__(self):
-        return len(self.queue)
+        # return len(self.queue)
+        return sum([x[0][0] for x in self.queue])
 
     @staticmethod
     def reshape(values):

@@ -26,7 +26,7 @@ class VariableList(object):
 
     def get_variables(self):
         return tf.get_default_session().run(
-            self.variables
+            self.op_variables,
         )
 
     def flatten_gradient(self, op_loss):

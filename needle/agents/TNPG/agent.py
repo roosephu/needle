@@ -102,11 +102,11 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         old_loss, old_KL, old_actions = self.net.test(feed_dict)
         logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
 
-        self.net.apply_grad(natural_gradient)
         # new_loss, new_KL, new_actions = self.model.test(feed_dict, old_actions=old_actions)
         # logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
         #
         while True:
+            self.net.apply_var(variables - natural_gradient)
             new_loss, new_KL, new_actions = self.net.test(feed_dict, old_actions=old_actions)
             logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
             # logging.debug("new variables %s" % (var,))
@@ -119,7 +119,7 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
             # logging.info("new loss = %s, KL divergence = %s" % (new_loss, new_KL - old_KL))
             if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
                 break
-            self.net.apply_grad(natural_gradient * (line_search_decay - 1))
+            # self.net.apply_grad(natural_gradient * (line_search_decay - 1))
             natural_gradient *= line_search_decay
 
         # self.model.apply_delta(-natural_gradient)

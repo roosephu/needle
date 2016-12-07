@@ -17,6 +17,13 @@ class AssignGradient(VariableList):
             assigns.append(tf.assign_sub(var, delta))
         return tf.group(*assigns)
 
+    @cached_property
+    def _op_apply_var(self):
+        assigns = []
+        for var, delta in zip(self.variables, self._unpack(self._op_delta)):
+            assigns.append(tf.assign(var, delta))
+        return tf.group(*assigns)
+
     def _unpack(self, grad):
         grads = []
         index = 0
@@ -35,5 +42,10 @@ class AssignGradient(VariableList):
             }
         )
 
-
-
+    def apply_var(self, var):
+        tf.get_default_session().run(
+            self._op_apply_var,
+            feed_dict={
+                self._op_delta: var,
+            }
+        )
