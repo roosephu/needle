@@ -37,3 +37,18 @@ def declare_variables(func):
         return ret
 
     return wrapper
+
+
+def select(a, idx):
+    shape = tf.shape(idx)
+    # rank = len(idx.get_shape())
+    num_elements = tf.reduce_prod(shape)
+    base = tf.range(num_elements)
+    num_classes = tf.shape(a)[-1]
+    offset = tf.reshape(idx, [-1]) + base * num_classes
+    # t = 1
+    # for i in reversed(range(rank)):
+    #     offset += base // t % shape[i] * t * num_classes
+    #     t *= shape[i]
+
+    return tf.reshape(tf.gather(tf.reshape(a, [-1]), offset), shape)

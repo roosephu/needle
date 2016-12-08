@@ -1,5 +1,6 @@
 import numpy as np
 import gflags
+import logging
 
 gflags.DEFINE_float("CG_damping", 1e-4, "damping coefficient when applying CG")
 gflags.DEFINE_float("CG_norm_limit", 1e-2, "stops when the L2 norm of residual is smaller than this")

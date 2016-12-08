@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import gflags
 from needle.helper.fisher_vector_product import FisherVectorProduct
-from needle.helper.utils import declare_variables
+from needle.helper.utils import declare_variables, select
 
 FLAGS = gflags.FLAGS
 
@@ -39,34 +39,41 @@ class Net(FisherVectorProduct):
     def build_train(self):
 
         self.op_advantages = tf.placeholder(tf.float32)
-        self.op_choices = tf.placeholder(tf.int32)
+        self.op_choices = tf.placeholder(tf.int32, [None, None])
         self.op_mask = tf.placeholder(tf.float32)
         self.op_length = tf.placeholder(tf.float32)
+        self.op_old_logits = tf.placeholder(tf.float32)
 
-        op_actions_log_prob = -tf.nn.sparse_softmax_cross_entropy_with_logits(self.op_logits, self.op_choices)
+        # op_actions_log_prob = -tf.nn.sparse_softmax_cross_entropy_with_logits(self.op_logits, self.op_choices)
+        # self.op_loss = tf.reduce_sum(-self.op_advantages * op_actions_log_prob * self.op_mask) / \
+        #                tf.to_float(self.batch_size)
+        self.op_loss = tf.reduce_sum(
+            -self.op_advantages * self.op_mask *
+            tf.exp(select(tf.nn.log_softmax(self.op_logits) - tf.nn.log_softmax(self.op_old_logits), self.op_choices))
+        ) / tf.to_float(self.batch_size)
 
-        self.op_loss = tf.reduce_sum(-self.op_advantages * op_actions_log_prob * self.op_mask) / \
-                       tf.to_float(self.batch_size)
         self.op_grad = self.flatten_gradient(self.op_loss)
 
         # TRUE KL divergence should be the following. However, constants are ignored
         # self.kl_divergence = self.old_distribution * tf.log(self.old_distribution / tf.nn.softmax(self.logits))
 
-        self.op_old_actions = tf.identity(self.op_actions)  # IMPORTANT tf.identity
-        self.op_kl_divergence = -tf.reduce_sum(
-            tf.stop_gradient(self.op_old_actions * tf.expand_dims(self.op_mask, 2)) * tf.nn.log_softmax(self.op_logits)
+        self.op_kl_divergence = tf.reduce_sum(
+            # tf.nn.softmax_cross_entropy_with_logits(self.op_old_logits, self.op_actions) * self.op_mask,
+            tf.stop_gradient(tf.nn.softmax(self.op_old_logits) * tf.expand_dims(self.op_mask, 2)) *
+                (tf.nn.log_softmax(self.op_old_logits) - tf.nn.log_softmax(self.op_logits))
         ) / tf.reduce_sum(self.op_length)
 
         # Hessian-vector product
         self.build_fisher_vector_product(self.op_kl_divergence)
 
-    def get_dict(self, lengths, mask, inputs, choices, advantages):
+    def get_dict(self, lengths, mask, inputs, choices, advantages, old_logits):
         return {
             self.op_mask: mask,
             self.op_inputs: inputs,
             self.op_length: lengths,
             self.op_choices: choices,
             self.op_advantages: advantages,
+            self.op_old_logits: old_logits,
         }
 
     def fisher_vector_product(self, vec, feed_dict):
@@ -90,20 +97,9 @@ class Net(FisherVectorProduct):
     def reset(self):
         pass
 
-    def test(self, feed_dict, old_actions=None):
-        feed_dict = feed_dict.copy()
-        if old_actions is not None:
-            feed_dict[self.op_old_actions] = old_actions
-
-        # index = 0
-        # for var in self.variables:
-        #     shape = var.get_shape()
-        #     num_elements = int(np.prod(shape))
-        #     feed_dict[var] = variables[index:index + num_elements].reshape(shape)
-        #     index += num_elements
-
+    def test(self, feed_dict):
         return tf.get_default_session().run(
-            [self.op_loss, self.op_kl_divergence, self.op_actions],
+            [self.op_loss, self.op_kl_divergence],
             feed_dict=feed_dict,
         )
 

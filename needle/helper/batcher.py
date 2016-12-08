@@ -9,6 +9,14 @@ FLAGS = gflags.FLAGS
 
 class Batcher(object):
     @cached_property
+    def batch_mode(self):
+        return "episode"
+
+    @cached_property
+    def _episode_count(self):
+        return 0
+
+    @cached_property
     def _buffer(self):
         return BatchBuffer()
 
@@ -28,12 +36,18 @@ class Batcher(object):
     def train(self, done):
         states, actions, rewards, new_states = self._episode_buffer.get()
         length = len(states)
+        if self.batch_mode == "step":
+            self._episode_count += length
+        elif self.batch_mode == "episode":
+            self._episode_count += 1
+
         mask = np.ones(length)
 
         episode = np.array([length]), np.array([mask]), np.array([states]), np.array([actions]), \
                   np.array([rewards]), np.array([new_states])
         self._buffer.add(episode)
         # logging.info("buffer = %s" % (len(self._buffer)))
-        if len(self._buffer) >= FLAGS.batch_size:
+        if self._episode_count >= FLAGS.batch_size:
+            self._episode_count = 0
             data = self._buffer.get()
             self.train_batch(*data)
