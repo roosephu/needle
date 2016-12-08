@@ -3,19 +3,18 @@ import logging
 import numpy as np
 
 from needle.agents import BasicAgent, register_agent
-from needle.agents.TRPO.net import Net
+from needle.agents.TNPG.net import Net
 from needle.agents.TRPO.critic import Critic
 from needle.helper.conjugate_gradient import conjugate_gradient
 from needle.helper.OU_process import OUProcess
 from needle.helper.softmax_sampler import SoftmaxSampler
 from needle.helper.batcher import Batcher
-from needle.helper.utils import decay_cumsum
+from needle.helper.utils import decay_cumsum, softmax
 
 gflags.DEFINE_float("GAE_lambda", 0.98, "GAE lambda")
 gflags.DEFINE_float("critic_eps", 0.01, "critic's trust region")
+gflags.DEFINE_float("line_search_decay", 0.7, "line search's decay factor")
 FLAGS = gflags.FLAGS
-
-line_search_decay = 0.5
 
 
 @register_agent("TRPO")
@@ -33,6 +32,8 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         self.critic.build_infer()
         self.critic.build_train()
 
+        self.batch_mode = "step"
+
     def compute_advantage(self, values, mask, rewards):
         advantages = FLAGS.gamma * values[:, 1:] + rewards - values[:, :-1]
         advantages = decay_cumsum(advantages[:, ::-1], FLAGS.gamma * FLAGS.GAE_lambda)[:, ::-1]
@@ -43,8 +44,10 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         advantages = self.compute_advantage(values, mask, rewards)
         # logging.info("GAE = %s" % (advantages.shape,))
 
-        feed_dict = self.net.get_dict(lengths, mask, states, choices, advantages)
 
+        old_logits = self.net.infer(states)
+        old_actions = softmax(old_logits)
+        feed_dict = self.net.get_dict(lengths, mask, states, choices, advantages, old_logits)
         gradient = self.net.gradient(feed_dict)
 
         natural_gradient, dot_prod = conjugate_gradient(
@@ -52,18 +55,18 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
             gradient,
         )
         natural_gradient *= np.sqrt(2 * FLAGS.delta_KL / (dot_prod + 1e-8))
+        variables = self.net.get_variables()
 
-        old_loss, old_KL, old_actions = self.net.test(feed_dict)
+        old_loss, old_KL = self.net.test(feed_dict)
         logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
 
-        self.net.apply_grad(natural_gradient)
         while True:
-            new_loss, new_KL, new_actions = self.net.test(feed_dict, old_actions=old_actions)
+            self.net.apply_var(variables - natural_gradient)
+            new_loss, new_KL = self.net.test(feed_dict)
             logging.info("new loss = %s, new KL = %s" % (new_loss, np.mean(new_KL)))
             if new_KL - old_KL <= FLAGS.delta_KL and new_loss <= old_loss:
                 break
-            self.net.apply_grad(natural_gradient * (line_search_decay - 1))
-            natural_gradient *= line_search_decay
+            natural_gradient *= FLAGS.line_search_decay
 
     def train_critic(self, lengths, values, states, rewards):
         total_rewards = decay_cumsum(rewards[:, ::-1], FLAGS.gamma)[:, ::-1]

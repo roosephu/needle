@@ -59,12 +59,8 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
             lambda direction: self.net.fisher_vector_product(direction, feed_dict),
             gradient,
         )
-        # logging.info("natural gradient = %s" % (natural_gradient,))
-        # logging.info("dot prod = %s" % (dot_prod,))
         natural_gradient *= np.sqrt(2 * FLAGS.delta_KL / (dot_prod + 1e-8))
         variables = self.net.get_variables()
-        # logging.info(feed_dict)
-        # logging.info("gradient = %s" % (gradient,))
 
         old_loss, old_KL = self.net.test(feed_dict)
         logging.info("old loss = %s, old KL = %s" % (old_loss, np.mean(old_KL)))
