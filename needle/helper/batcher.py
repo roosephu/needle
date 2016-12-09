@@ -48,6 +48,8 @@ class Batcher(object):
         self._buffer.add(episode)
         # logging.info("buffer = %s" % (self._episode_count))
         if self._episode_count >= FLAGS.batch_size:
+            logging.info("========== train iteration ==========")
+
             self._episode_count = 0
             data = self._buffer.get()
             self.train_batch(*data)

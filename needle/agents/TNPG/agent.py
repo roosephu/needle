@@ -46,7 +46,6 @@ class Agent(SoftmaxSampler, Batcher, BasicAgent):
         self.baseline = 20
 
     def train_batch(self, lengths, mask, states, choices, rewards, new_states):
-        logging.info("========== train iteration ==========")
 
         advantages = np.cumsum(rewards[:, ::-1], axis=1)[:, ::-1]
         old_logits = self.net.infer(states)

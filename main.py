@@ -49,7 +49,7 @@ def main():
         saver.restore(tf.get_default_session(), FLAGS.model_dir)
 
     merged = tf.summary.merge_all()
-    if tf.gfile.Exists(FLAGS.log_dir):
+    if FLAGS.log_dir != "" and tf.gfile.Exists(FLAGS.log_dir):
         tf.gfile.DeleteRecursively(FLAGS.log_dir)
     summary_writer = tf.train.SummaryWriter(FLAGS.log_dir)
 
